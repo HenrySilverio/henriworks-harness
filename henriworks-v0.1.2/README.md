@@ -1,11 +1,16 @@
 <p align="center">
-  <img src="assets/henriworks-logo.svg" alt="HenriWorks Engineering Harness" width="420">
+  <img src="assets/readme/banner.svg" width="900" alt="HENRIWORKS, Engineering Harness v0.1.2: da intenção à PR no Copilot do VS Code. Quem escreve não revisa, e o mapa responde antes da busca.">
 </p>
 
 # HenriWorks Engineering Harness 0.1.2
 
-Harness do GitHub Copilot no VS Code que leva uma intenção até a PR, em backend, BFF ou frontend, de
-qualquer stack. Sucede o HenriSpec 0.4.5 e o HenriSpec Discovery 0.3.1, num pacote só.
+> Harness do GitHub Copilot no VS Code que leva uma intenção até a PR, em backend, BFF ou frontend, de
+> qualquer stack. Cada fase tem um agente, cada portão é um script ou uma pessoa, e nenhuma revisão é
+> feita por quem escreveu. Sucede o HenriSpec 0.4.5 e o HenriSpec Discovery 0.3.1, num pacote só.
+
+<p align="center">
+  <img src="assets/readme/stats.svg" width="900" alt="16 agentes, 15 atalhos /hwk-*, 0 dependências de npm, 21 de 21 passos no teste de fumaça">
+</p>
 
 O que muda em relação ao HenriSpec, em uma frase cada:
 
@@ -21,7 +26,115 @@ O que muda em relação ao HenriSpec, em uma frase cada:
   ticket do Jira, fora de qualquer repositório.
 - **Só um arquivo vai para o Git:** o registro em `conhecimento/`. O resto fica em `.git/info/exclude`.
 
+<p align="center">
+  <img src="assets/readme/section-como-jogar.svg" width="900" alt="Como jogar">
+</p>
+
+<p align="center">
+  <img src="assets/readme/flow.svg" width="900" alt="Fluxo de fases: Intenção (agente hwk), Discovery (hwk-grill), Plano (hwk-plan), Revisão (hwk-review), Fatias (hwk-implement), Archive (hwk-archive)">
+</p>
+
+Três regras valem o jogo inteiro:
+
+1. **Uma fase por chat.** Fase nova pede chat novo, com o agente da fase selecionado no seletor de
+   agentes. Encadear fases no mesmo chat carrega a conversa anterior para dentro da próxima.
+2. **O portão é de script ou de uma pessoa.** O agente não decide sozinho que terminou:
+   `hwk validar`, `hwk aprovar-spec`, três vereditos APROVADO no HEAD.
+3. **O fluxo lê Git e não escreve Git.** Commit, branch, push e PR são seus. O agente para e diz o que
+   fazer.
+
+Nos comandos abaixo, `hwk` é `node .henriworks/bin/hwk.mjs`, rodado da raiz do repositório.
+
+### Fase 0 · Prepare a máquina (uma vez por repositório)
+
+Descompacte o pacote fora do repositório e rode, nesta ordem:
+
+```bash
+# 1. valida Node, Git e os scripts num repositório temporário (esperado: 21/21 passos ok)
+node C:\caminho\henriworks-v0.1.2\testes\smoke.mjs
+
+# 2. da raiz do seu repositório: veja o plano, depois instale
+node C:\caminho\henriworks-v0.1.2\instalar.mjs repo . --dry-run
+node C:\caminho\henriworks-v0.1.2\instalar.mjs repo .
+
+# 3. prepara o canário e mostra a palavra-código
+node .henriworks/bin/hwk.mjs canario preparar
+```
+
+Depois do `preparar`:
+
+1. Recarregue o VS Code.
+2. Abra um chat **novo**, selecione o agente `hwk-review` e envie `canario <palavra-código>`.
+3. Volte para o **terminal** (não precisa ser naquele chat) e confira:
+
+```bash
+node .henriworks/bin/hwk.mjs canario conferir   # sempre antes do aplicar
+node .henriworks/bin/hwk.mjs canario aplicar    # só se o conferir disse "isolamento confirmado"
+```
+
+> **Por que "canário"?** Mineiros levavam um canário para dentro da mina de carvão: se o pássaro
+> passasse mal, havia gás, e todos saíam antes de alguém se machucar. O canário do HenriWorks é esse
+> aviso antecipado. Ele prova, na sua máquina, que o revisor não recebe a conversa e que os hooks rodam,
+> antes de você confiar nisso. No código é `canario`, sem acento, para não dar problema em terminal.
+
+Se o `conferir` disser `isolamento FALHOU` ou `NENHUM evento registrado`, não aplique: veja a
+[seção 4](#4-primeiro-uso-o-canário). Por fim, edite `.henriworks/verificacao.json` (as camadas
+vieram de um molde de MFE Angular) e, se quiser uso e custo, ligue o OpenTelemetry com
+`node .henriworks/bin/uso.mjs configurar`.
+
+### Fase 1 · Sua primeira mudança
+
+| # | Abra um chat novo com | Envie | Sai | Portão: o que **você** faz |
+|---|---|---|---|---|
+| 1 | `hwk` | o que você quer, em uma frase | a rota: direto, discovery ou plano | escolhe a rota |
+| 2 | `hwk-grill` (ou `hwk-triagem` para ticket) | `/hwk-grill <a necessidade>` | `.henriworks/briefings/<assunto>/briefing.md` | responde as rodadas de perguntas |
+| 3 | `hwk-plan` | `/hwk-plan <caminho do briefing>` | proposta, rigor Lite ou Full, fatias | confere se `hwk validar` passou |
+| 4 | `hwk-review` | `/hwk-review spec <id>` | vereditos dos peixinhos | `hwk aprovar-spec <id> --por "Seu Nome"` |
+| 5 | `hwk-implement` | `/hwk-implement <id>` | código de uma fatia | revisa o diff e commita; repete até a Verificação |
+| 6 | `hwk-review` | `/hwk-review <id>` | spec, padrões e plantão no HEAD | corrige o que vier REPROVADO, pelo `hwk-plan` |
+| 7 | `hwk-archive` | `/hwk-archive <id>` | `resumo.md` e mudança arquivada | abre a PR com o `resumo.md` |
+| 8 | `hwk-archive` | `/hwk-fechar <pasta arquivada> <nº da PR>` | `conhecimento/<data>-<slug>.md` | commita esse arquivo na branch da PR |
+
+Perdeu o fio? `hwk estado` diz a fase de cada mudança aberta e o agente da vez:
+
+<p align="center">
+  <img src="assets/readme/terminal.svg" width="900" alt="Sessão de terminal: hwk estado mostra a mudança mostrar-saldo-projetado na fase implement; hwk fatias mostra as fatias 02 e 03 prontas e que podem rodar juntas; depois de um chat com hwk-implement em paralelo, hwk conferir-toca confirma que nenhum arquivo saiu do declarado">
+</p>
+
+```bash
+node .henriworks/bin/hwk.mjs estado
+node .henriworks/bin/hwk.mjs fatias <id>
+node .henriworks/bin/hwk.mjs conferir-toca <id>
+```
+
+### Atalhos
+
+Os atalhos de fase só funcionam com o agente da fase selecionado; fora dele, respondem qual agente
+selecionar. `/hwk-canario` e `/hwk-mapa` são utilitários e rodam em qualquer agente com terminal.
+
+<p align="center">
+  <img src="assets/readme/cards.svg" width="900" alt="Atalhos: /hwk-start, /hwk-grill, /hwk-plan, /hwk-review, /hwk-implement, /hwk-archive, /hwk-fechar, /hwk-canario e /hwk-mapa, cada um com o que faz">
+</p>
+
+Também existem `/hwk-triagem` e `/hwk-prototipo` (discovery a partir de ticket e protótipo
+descartável) e os utilitários `/hwk-ticket`, `/hwk-adotar`, `/hwk-uso` e `/hwk-modelos`, que rodam em
+qualquer agente com terminal. Lista completa na [seção 13](#13-comandos).
+
+### Dicas de jogador
+
+- **Antes de procurar no código, pergunte ao mapa:** `node .henriworks/bin/henrimap.mjs query "<termos>"`.
+  Numa sessão do fluxo, a primeira busca sem consultar o mapa é negada uma vez, com essa sugestão.
+- **Ticket certo, custo certo.** O nome da branch com a chave do Jira já basta; senão,
+  `/hwk-ticket CHAVE-123`.
+- **Orçamento por mudança:** `node .henriworks/bin/uso.mjs orcamento <id> 400` avisa em 50%, 80% e
+  100%. Só avisa, nunca bloqueia.
+- **Pedido pequeno não precisa do fluxo.** Teste quebrado, texto, configuração: peça direto ao agente
+  padrão.
+- **Travou?** A [seção 14](#14-solução-de-problemas) tem os sintomas mais comuns e o que fazer.
+
 ---
+
+# Referência
 
 ## Sumário
 
