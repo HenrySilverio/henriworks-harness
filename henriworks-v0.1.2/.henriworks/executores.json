@@ -1,0 +1,18 @@
+{
+  "_leia": "Quem pode executar uma fatia. A fatia declara 'Executor: <nome>'; o coordenador só despacha para o que estiver aqui. Incluir um agente é editar este arquivo.",
+  "executores": {
+    "hwk-implementador": {
+      "tipo": "padrao",
+      "quando": "qualquer fatia de código",
+      "camadas": ["*"]
+    },
+    "design-to-code": {
+      "tipo": "agente-externo",
+      "quando": "tela nova ou alterada a partir de um frame do Figma",
+      "entrada": ["caminho da fatia", "link do frame do Figma, na seção Ponteiros da fatia"],
+      "saida": "arquivos alterados e a confirmação da linha Demonstra",
+      "exige": ["agente design-to-code instalado", "MCP do Figma"],
+      "revisao": "tres-eixos"
+    }
+  }
+}
