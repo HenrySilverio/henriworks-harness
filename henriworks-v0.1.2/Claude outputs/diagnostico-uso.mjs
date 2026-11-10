@@ -46,6 +46,7 @@ const grupos = new Map();   // nome|op -> estatística
 const formas = new Map();   // forma da linha (chaves do topo) -> contagem
 let linhas = 0, invalidas = 0, primeira = null, ultima = null;
 const convOtel = new Set();
+const porAgente = new Map(); // gen_ai.agent.name -> { n, in, out, cr, aiu, modelos }
 
 function tempo(no) {
   const v = no.startTimeUnixNano ?? no.startTime ?? no.timeUnixNano ?? no.hrTime ?? no.timestamp ?? no.time;
@@ -82,6 +83,15 @@ function visitar(no, prof = 0) {
       if (!TEXTO_PERMITIDO.has(c) || c.endsWith('.model')) continue;
       if (seguro(at[c])) { const kk = `${c}=${at[c]}`; g.valores.set(kk, (g.valores.get(kk) || 0) + 1); }
     }
+    if (usoKeys.length) {
+      const ag = seguro(at['gen_ai.agent.name']) ? at['gen_ai.agent.name'] : '(sem agent.name)';
+      if (!porAgente.has(ag)) porAgente.set(ag, { n: 0, in: 0, out: 0, cr: 0, aiu: 0, comAiu: 0, modelos: new Set() });
+      const a = porAgente.get(ag);
+      a.n++; a.in += num(at['gen_ai.usage.input_tokens']); a.out += num(at['gen_ai.usage.output_tokens']); a.cr += num(at['gen_ai.usage.cache_read.input_tokens']);
+      if (at['copilot_chat.copilot_usage_nano_aiu'] != null) { a.aiu += num(at['copilot_chat.copilot_usage_nano_aiu']); a.comAiu++; }
+      const m = seguro(at['gen_ai.response.model']) ? at['gen_ai.response.model'] : seguro(at['gen_ai.request.model']) ? at['gen_ai.request.model'] : '?';
+      a.modelos.add(m);
+    }
     if (at['gen_ai.conversation.id']) { g.conv++; convOtel.add(String(at['gen_ai.conversation.id'])); }
     const t = tempo(no);
     if (t && !Number.isNaN(t.getTime())) { if (!primeira || t < primeira) primeira = t; if (!ultima || t > ultima) ultima = t; }
@@ -92,7 +102,7 @@ function visitar(no, prof = 0) {
 const lerJson = (p) => { try { return JSON.parse(readFileSync(p, 'utf8')); } catch { return null; } };
 const lerJsonl = (dir) => (existsSync(dir) ? readdirSync(dir).filter((n) => n.endsWith('.jsonl')).flatMap((n) => readFileSync(join(dir, n), 'utf8').split(/\r?\n/).filter(Boolean).map((l) => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean)) : []);
 
-const out = ['# Diagnóstico de uso · HenriWorks', '', `Gerado em ${new Date().toISOString()} · ${platform()} · Node ${process.versions.node}`, ''];
+const out = ['# Diagnóstico de uso · HenriWorks (v2)', '', `Gerado em ${new Date().toISOString()} · ${platform()} · Node ${process.versions.node}`, ''];
 
 // 1. Configuração do exportador
 out.push('## 1. Exportador OpenTelemetry', '');
@@ -106,6 +116,8 @@ const settings = [
 if (settings) {
   const txt = readFileSync(settings, 'utf8');
   const ks = [...txt.matchAll(/"(github\.copilot\.chat\.otel\.[\w.]+|github\.copilot\.chat\.[\w.]*telemetry[\w.]*)"\s*:\s*("[^"]*"|true|false|\d+)/g)];
+  const outfile = (txt.match(/"github\.copilot\.chat\.otel\.outfile"\s*:\s*"([^"]*)"/) || [])[1];
+  if (outfile && process.env.COPILOT_OTEL_FILE_EXPORTER_PATH) out.push(`- outfile do settings.json e a variável apontam para o mesmo arquivo: ${outfile.replace(/\\\\/g, '\\').toLowerCase() === process.env.COPILOT_OTEL_FILE_EXPORTER_PATH.toLowerCase() ? 'sim' : 'NÃO (pode haver dois arquivos OTel)'}`);
   out.push(`- settings.json do VS Code: ${ks.length ? ks.map((m) => `\`${m[1]}\` = ${/outfile|path|endpoint/i.test(m[1]) ? '(definido)' : m[2]}`).join('; ') : 'nenhuma chave github.copilot.chat.otel.*'}`);
 } else out.push('- settings.json do VS Code: não encontrado no caminho padrão');
 out.push('');
@@ -137,6 +149,10 @@ if (!existsSync(OTEL)) {
     const [nome, opn] = k.split(' | ');
     out.push(`| \`${nome}\` | ${opn} | ${g.n} | ${g.comUso} | ${g.in} | ${g.out} | ${g.cr} | ${[...g.modelos].slice(0, 5).map(([m, n]) => `${m} ×${n}`).join('<br>') || '-'} | ${g.conv} |`);
   }
+  out.push('', '### Chamadas com token, por origem (gen_ai.agent.name)', '');
+  out.push('| origem | chamadas | modelos | entrada | saída | cache | com nano_aiu | soma nano_aiu |');
+  out.push('| --- | ---: | --- | ---: | ---: | ---: | ---: | ---: |');
+  for (const [ag, a] of [...porAgente].sort((x, y) => y[1].in - x[1].in)) out.push(`| \`${ag}\` | ${a.n} | ${[...a.modelos].join(', ')} | ${a.in} | ${a.out} | ${a.cr} | ${a.comAiu} | ${a.aiu} |`);
   out.push('', '### Chaves de atributo por registro (só o nome da chave)', '');
   for (const [k, g] of [...grupos].sort((a, b) => b[1].n - a[1].n).slice(0, 15)) {
     out.push(`- \`${k}\`: ${[...g.chaves.keys()].sort().map((c) => `\`${c}\``).join(', ')}`);
