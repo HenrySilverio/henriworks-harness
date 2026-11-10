@@ -5,11 +5,11 @@
 # HenriWorks Engineering Harness 0.1.2
 
 > Harness do GitHub Copilot no VS Code que leva uma intenção até a PR, em backend, BFF ou frontend, de
-> qualquer stack. Cada fase tem um agente, cada portão é um script ou uma pessoa, e nenhuma revisão é
-> feita por quem escreveu. Sucede o HenriSpec 0.4.5 e o HenriSpec Discovery 0.3.1, num pacote só.
+> qualquer stack. Cada fase tem um agente, cada procedimento é um comando `/hwk-*`, cada portão é um
+> script ou uma pessoa, e nenhuma revisão é feita por quem escreveu. Sucede o HenriSpec 0.4.5 e o HenriSpec Discovery 0.3.1, num pacote só.
 
 <p align="center">
-  <img src="assets/readme/stats.svg" width="900" alt="16 agentes, 15 atalhos /hwk-*, 0 dependências de npm, 21 de 21 passos no teste de fumaça">
+  <img src="assets/readme/stats.svg" width="900" alt="9 agentes, 16 comandos /hwk-*, 0 dependências de npm, 24 de 24 passos no teste de fumaça">
 </p>
 
 O que muda em relação ao HenriSpec, em uma frase cada:
@@ -25,13 +25,17 @@ O que muda em relação ao HenriSpec, em uma frase cada:
 - **Uso e custo por task.** Token, modelo e custo vêm do OpenTelemetry do Copilot e ficam ligados ao
   ticket do Jira, fora de qualquer repositório.
 - **Só um arquivo vai para o Git:** o registro em `conhecimento/`. O resto fica em `.git/info/exclude`.
+- **Mais skills, menos agentes.** 9 agentes, cada um uma fronteira de permissão; os procedimentos moram
+  em 16 comandos `/hwk-*`. Um só revisor sem contexto (`hwk-gf`), com a lente dentro do pacote.
+- **Pronto num chat.** Depois de instalar, `/hwk-init` confere tudo, corrige o que é seguro, roda o
+  canário e liga o uso. Modelos e preços já vêm no pacote.
 
 <p align="center">
   <img src="assets/readme/section-como-jogar.svg" width="900" alt="Como jogar">
 </p>
 
 <p align="center">
-  <img src="assets/readme/flow.svg" width="900" alt="Fluxo de fases: Intenção (agente hwk), Discovery (hwk-grill), Plano (hwk-plan), Revisão (hwk-review), Fatias (hwk-implement), Archive (hwk-archive)">
+  <img src="assets/readme/flow.svg" width="900" alt="Fluxo de fases: Preparação (/hwk-init no agente hwk), Discovery (hwk-discovery), Plano (hwk-plan), Revisão (hwk-review), Fatias (hwk-implement), Archive (hwk-archive)">
 </p>
 
 Três regras valem o jogo inteiro:
@@ -45,49 +49,52 @@ Três regras valem o jogo inteiro:
 
 Nos comandos abaixo, `hwk` é `node .henriworks/bin/hwk.mjs`, rodado da raiz do repositório.
 
-### Fase 0 · Prepare a máquina (uma vez por repositório)
+### Fase 0 · Instale e rode o /hwk-init (uma vez por repositório)
 
 Descompacte o pacote fora do repositório e rode, nesta ordem:
 
 ```bash
-# 1. valida Node, Git e os scripts num repositório temporário (esperado: 21/21 passos ok)
+# 1. valida Node, Git e os scripts num repositório temporário (esperado: 24/24 passos ok)
 node C:\caminho\henriworks-v0.1.2\testes\smoke.mjs
 
 # 2. da raiz do seu repositório: veja o plano, depois instale
 node C:\caminho\henriworks-v0.1.2\instalar.mjs repo . --dry-run
 node C:\caminho\henriworks-v0.1.2\instalar.mjs repo .
-
-# 3. prepara o canário e mostra a palavra-código
-node .henriworks/bin/hwk.mjs canario preparar
 ```
 
-Depois do `preparar`:
+Depois, no VS Code:
 
-1. Recarregue o VS Code.
-2. Abra um chat **novo**, selecione o agente `hwk-review` e envie `canario <palavra-código>`.
-3. Volte para o **terminal** (não precisa ser naquele chat) e confira:
+1. **Developer: Reload Window** (os hooks são lidos quando a janela abre).
+2. Chat novo, agente **`hwk`**, envie **`/hwk-init`**.
 
-```bash
-node .henriworks/bin/hwk.mjs canario conferir   # sempre antes do aplicar
-node .henriworks/bin/hwk.mjs canario aplicar    # só se o conferir disse "isolamento confirmado"
-```
+O `/hwk-init` faz, no mesmo chat, o que antes era comando por comando:
+
+| Passo | O que faz | Precisa de você? |
+| --- | --- | --- |
+| Conferir | Node, Git, agentes e skills, hooks (e a guarda de veredito respondendo), `.git/info/exclude`, bloco do `AGENTS.md`, mapa, modelos, preços, OTel, canário | não |
+| Corrigir o seguro | constrói o mapa, instala os hooks do Git, carrega a lista de modelos do pacote | não |
+| Canário | prepara a palavra-código, delega ao revisor `hwk-gf` com o pacote, confere e liga a conferência do pacote | não |
+| OpenTelemetry | mostra se está ligado; se não, **pergunta** antes de gravar a variável no seu usuário | sim, um "sim" |
+| Relatório | o que ficou pronto, o que ficou pendente e quem resolve; grava `.henriworks/estado/init.json` | não |
+
+Pode rodar de novo quando quiser: o que já está pronto é pulado. O mesmo diagnóstico existe no terminal:
+`node .henriworks/bin/hwk.mjs init` (só confere) ou `init --corrigir`.
 
 > **Por que "canário"?** Mineiros levavam um canário para dentro da mina de carvão: se o pássaro
 > passasse mal, havia gás, e todos saíam antes de alguém se machucar. O canário do HenriWorks é esse
 > aviso antecipado. Ele prova, na sua máquina, que o revisor não recebe a conversa e que os hooks rodam,
 > antes de você confiar nisso. No código é `canario`, sem acento, para não dar problema em terminal.
 
-Se o `conferir` disser `isolamento FALHOU` ou `NENHUM evento registrado`, não aplique: veja a
-[seção 4](#4-primeiro-uso-o-canário). Por fim, edite `.henriworks/verificacao.json` (as camadas
-vieram de um molde de MFE Angular) e, se quiser uso e custo, ligue o OpenTelemetry com
-`node .henriworks/bin/uso.mjs configurar`.
+Se o relatório disser `isolamento FALHOU` ou que nenhum hook registrou evento, veja a
+[seção 4](#4-primeiro-uso-hwk-init-e-o-canário). Pendências que são do time, e que o init só aponta:
+`.henriworks/verificacao.json` (as camadas vieram de um molde de MFE Angular) e `.henriworks/padroes.md`.
 
 ### Fase 1 · Sua primeira mudança
 
 | # | Abra um chat novo com | Envie | Sai | Portão: o que **você** faz |
 |---|---|---|---|---|
-| 1 | `hwk` | o que você quer, em uma frase | a rota: direto, discovery ou plano | escolhe a rota |
-| 2 | `hwk-grill` (ou `hwk-triagem` para ticket) | `/hwk-grill <a necessidade>` | `.henriworks/briefings/<assunto>/briefing.md` | responde as rodadas de perguntas |
+| 1 | `hwk` (ou qualquer agente com terminal) | `/hwk-start <o que você quer>` | a rota: direto, discovery ou plano | escolhe a rota |
+| 2 | `hwk-discovery` | `/hwk-grill <a necessidade>` ou `/hwk-triagem <ticket>` | `.henriworks/briefings/<assunto>/briefing.md` | responde as rodadas de perguntas |
 | 3 | `hwk-plan` | `/hwk-plan <caminho do briefing>` | proposta, rigor Lite ou Full, fatias | confere se `hwk validar` passou |
 | 4 | `hwk-review` | `/hwk-review spec <id>` | vereditos dos peixinhos | `hwk aprovar-spec <id> --por "Seu Nome"` |
 | 5 | `hwk-implement` | `/hwk-implement <id>` | código de uma fatia | revisa o diff e commita; repete até a Verificação |
@@ -109,16 +116,16 @@ node .henriworks/bin/hwk.mjs conferir-toca <id>
 
 ### Atalhos
 
-Os atalhos de fase só funcionam com o agente da fase selecionado; fora dele, respondem qual agente
-selecionar. `/hwk-canario` e `/hwk-mapa` são utilitários e rodam em qualquer agente com terminal.
+Cada comando roda no agente que tem as ferramentas dele; fora dele, responde qual agente selecionar.
+`/hwk-init` e `/hwk-canario` rodam no `hwk`; `/hwk-grill` e `/hwk-triagem` no `hwk-discovery`;
+`/hwk-start` e os utilitários, em qualquer agente com terminal.
 
 <p align="center">
-  <img src="assets/readme/cards.svg" width="900" alt="Atalhos: /hwk-start, /hwk-grill, /hwk-plan, /hwk-review, /hwk-implement, /hwk-archive, /hwk-fechar, /hwk-canario e /hwk-mapa, cada um com o que faz">
+  <img src="assets/readme/cards.svg" width="900" alt="Comandos: /hwk-init, /hwk-start, /hwk-grill, /hwk-triagem, /hwk-plan, /hwk-review, /hwk-implement, /hwk-archive e /hwk-fechar, cada um com o que faz">
 </p>
 
-Também existem `/hwk-triagem` e `/hwk-prototipo` (discovery a partir de ticket e protótipo
-descartável) e os utilitários `/hwk-ticket`, `/hwk-adotar`, `/hwk-uso` e `/hwk-modelos`, que rodam em
-qualquer agente com terminal. Lista completa na [seção 13](#13-comandos).
+Também existem `/hwk-prototipo` (protótipo descartável), `/hwk-canario` (repete só o canário) e os
+utilitários `/hwk-ticket`, `/hwk-adotar`, `/hwk-mapa`, `/hwk-uso` e `/hwk-modelos`. Lista completa na [seção 13](#13-comandos).
 
 ### Dicas de jogador
 
@@ -141,7 +148,7 @@ qualquer agente com terminal. Lista completa na [seção 13](#13-comandos).
 1. [Estado desta versão](#1-estado-desta-versão)
 2. [Requisitos](#2-requisitos)
 3. [Instalação](#3-instalação)
-4. [Primeiro uso: o canário](#4-primeiro-uso-o-canário)
+4. [Primeiro uso: /hwk-init e o canário](#4-primeiro-uso-hwk-init-e-o-canário)
 5. [O fluxo](#5-o-fluxo)
 6. [Revisão isolada](#6-revisão-isolada)
 7. [Fatias, paralelo e arquivo compartilhado](#7-fatias-paralelo-e-arquivo-compartilhado)
@@ -158,17 +165,19 @@ qualquer agente com terminal. Lista completa na [seção 13](#13-comandos).
 
 ## 1. Estado desta versão
 
-0.1.2 é a primeira versão pública: 0.1.0, mais o painel de uso completo (0.1.1) e os modelos liberados cruzados com uso e preço (0.1.2). O núcleo é estável; o que depende de comportamento do VS Code que ainda não
+0.1.2 é a primeira versão pública: 0.1.0, mais o painel de uso completo (0.1.1), os modelos liberados cruzados com uso e preço (0.1.2) e, ainda na 0.1.2, a consolidação em 9 agentes e 16 comandos, o `/hwk-init` e a lista de modelos e a tabela de preços dentro do pacote. O núcleo é estável; o que depende de comportamento do VS Code que ainda não
 foi provado em cada máquina vem **desligado** até o canário (seção 4) passar.
 
 | Parte | Estado | Por quê |
 | --- | --- | --- |
 | Agentes, fases, portões, validador, verificador | estável | portado do HenriSpec 0.4.5 e testado ponta a ponta |
-| Revisão isolada por subagente (`hwk-gf-*`) | estável, **conferir com o canário** | depende de o subagente não herdar a conversa |
+| Revisão isolada por subagente (`hwk-gf`, lente no pacote) | estável, **conferir com o canário** | depende de o subagente não herdar a conversa |
 | Mapa (L1 regex, L2 TypeScript e `jdeps`, L3 rotas e endpoints) | estável | sem dependência; usa o compilador do próprio projeto quando existe |
 | Uso e custo (OTel + painel) | experimental | o formato do arquivo OTel do Copilot ainda muda entre versões |
 | Hooks (guardas, coleta, mapa antes de busca) | experimental | hooks em marketplace interno não foram testados; tudo falha aberto |
-| Conferência do prompt literal do peixinho | experimental, **desligada** | liga com `hwk canario aplicar` |
+| Conferência do prompt literal do peixinho | experimental, **desligada** | o `/hwk-init` liga quando o canário passa |
+| `/hwk-init` | estável | só corrige o que é local e reversível; OTel pergunta antes |
+| Lista de modelos e preços do pacote | retrato de 09/11/2026 | é o seletor do VS Code naquela data, não a política viva do time |
 | Modo estrito (`hwk estrito`) | experimental | exige o Copilot CLI |
 | Trava de arquivo entre fatias paralelas | desligada | o padrão é avisar e pedir decisão ao humano, nunca bloquear |
 
@@ -211,25 +220,27 @@ script e apaga tudo no fim:
 node /caminho/henriworks-v0.1.2/testes/smoke.mjs
 ```
 
-O resultado esperado é `20/20 passos ok`. O teste não prova o que depende do VS Code (subagente
+O resultado esperado é `24/24 passos ok`. O teste não prova o que depende do VS Code (subagente
 isolado, hooks carregados pela janela): isso é o canário (seção 4).
 
 ### O que o instalador faz
 
 | Onde | O quê |
 | --- | --- |
-| `.github/agents/hwk*.agent.md` | 16 agentes: 9 de fase, 7 revisores |
-| `.github/skills/hwk-*/` | 15 atalhos `/hwk-*` |
+| `.github/agents/hwk*.agent.md` | 9 agentes: entrada, 6 de fase, o executor de fatia e o revisor |
+| `.github/skills/hwk-*/` | 16 comandos `/hwk-*`: procedimentos e atalhos |
 | `.github/skills/henriworks-fluxo/` | o contrato do fluxo e as referências |
 | `.github/hooks/henriworks.json` | os hooks do workspace |
-| `.henriworks/bin/` | scripts: `hwk.mjs`, `henrimap.mjs`, `verificar.mjs`, `uso.mjs`, `hook.mjs` |
+| `.henriworks/bin/` | scripts: `hwk.mjs`, `henrimap.mjs`, `verificar.mjs`, `uso.mjs`, `modelos.mjs`, `hook.mjs` |
+| `.henriworks/config/` | tabela de preços e lista de referência de modelos (gerenciadas: vêm com o pacote) |
 | `.henriworks/*.json`, `*.md` | sementes: configuração, verificação, padrões, glossário, índices |
 | `.henriworks/docs/` | este README e a logo |
 | `AGENTS.md` | um bloco curto entre `<!-- henriworks:inicio -->` e `<!-- henriworks:fim -->` |
 | `.git/info/exclude` | um bloco com tudo acima, para nada disso aparecer no `git status` |
 
 Depois de copiar, roda a pós-instalação: constrói o mapa, instala os hooks locais do Git que mantêm o
-mapa em dia (`post-checkout`, `post-merge`, `post-commit`) e lembra o canário e a configuração do OTel.
+mapa em dia (`post-checkout`, `post-merge`, `post-commit`), carrega a lista de modelos do pacote e
+aponta o próximo passo: agente `hwk`, `/hwk-init`.
 
 ### Tipos de arquivo
 
@@ -267,7 +278,14 @@ repositório: o agente aparece duas vezes no seletor.
 ### Atualizar
 
 Rode o mesmo comando com o pacote novo. O instalador compara cada arquivo com o lock: atualiza o que
-está intacto, cria o que é novo, remove o que saiu do pacote e para no que você alterou.
+está intacto, cria o que é novo, remove o que saiu do pacote e para no que você alterou. Depois, rode
+`/hwk-init` de novo.
+
+Quem instalou a 0.1.2 antes da consolidação: o instalador remove `hwk-grill`, `hwk-triagem` e os sete
+`hwk-gf-*` (se intactos) e cria `hwk-discovery` e `hwk-gf`. Se você aplicou a atualização avulsa de
+modelos e preços de 09/11, ela deixou de ser necessária: o `/hwk-init` avisa quando a sua cópia de
+`precos.json` e a sua lista em `.henriworks/modelos-liberados.json` não têm nada que o pacote não traga,
+e aí é só apagar as duas e tirar a chave `"modelos"` do `henriworks.json`.
 
 ### Pendências depois da primeira instalação
 
@@ -275,49 +293,61 @@ está intacto, cria o que é novo, remove o que saiu do pacote e para no que voc
    é um conjunto de pastas com os comandos que a verificam (lint, teste, build).
 2. Preencha `.henriworks/padroes.md` com as regras do repositório que dá para auditar. Vazio, o eixo
    padrões da revisão usa só o que o próprio código já faz.
-3. Rode o canário (seção 4).
-4. Ligue o OTel, se quiser uso e custo (seção 9).
+3. Rode o `/hwk-init` (seção 4): canário, OTel e o resto.
 
-## 4. Primeiro uso: o canário
+## 4. Primeiro uso: /hwk-init e o canário
 
-O canário prova duas coisas **na sua máquina**, antes de você confiar nelas:
-
-- que o revisor (subagente) não recebe a conversa de quem pediu a revisão;
-- que os hooks rodam e que formato de evento o seu VS Code entrega.
+Agente `hwk`, chat novo, `/hwk-init`. O procedimento está em `.github/skills/hwk-init/SKILL.md` e se
+apoia em `hwk init`, que dá para rodar sozinho no terminal:
 
 ```bash
-node .henriworks/bin/hwk.mjs canario preparar
+node .henriworks/bin/hwk.mjs init              # só confere
+node .henriworks/bin/hwk.mjs init --corrigir   # confere e corrige o que é local e reversível
+node .henriworks/bin/hwk.mjs init --json       # o mesmo, para script
 ```
 
-A saída traz uma palavra-código (`hwk-canario-xxxxxxxx`) e os passos:
+Cada linha do relatório tem um nível: `ok`, `corrigido`, `PENDENTE` (falta um passo, e o relatório diz
+qual), `aviso` (funciona, mas merece atenção) e `GRAVE` (o `/hwk-init` para; nada mais roda com a
+instalação quebrada). O que ele **nunca** faz sozinho: editar `verificacao.json` ou `padroes.md`, gravar
+variável de ambiente sem o seu "sim", tocar no Git.
 
-1. Recarregue o VS Code (hooks são lidos ao abrir a janela).
-2. Abra um chat **novo**, selecione o agente `hwk-review` e envie: `canario hwk-canario-xxxxxxxx`.
-3. O agente gera um pacote, delega ao revisor e grava a resposta.
-4. Rode `node .henriworks/bin/hwk.mjs canario conferir`.
+### O canário
+
+Prova duas coisas **na sua máquina**, antes de você confiar nelas:
+
+- que o revisor (subagente `hwk-gf`) não recebe a conversa de quem pediu a revisão;
+- que os hooks rodam e que formato de evento o seu VS Code entrega.
+
+Como roda, dentro do `/hwk-init` (ou do `/hwk-canario`), no mesmo chat:
+
+1. `hwk canario preparar` gera uma palavra-código (`hwk-canario-xxxxxxxx`). Ela aparece na saída do
+   terminal, portanto **está na conversa do pai**: é a isca.
+2. `hwk pacote-revisao canario` gera o pacote do teste.
+3. O agente delega ao `hwk-gf` com o prompt literal. O revisor responde se viu alguma palavra-código.
+4. A resposta é gravada sem edição e `hwk canario conferir` dá o veredito.
+5. Passou: `hwk canario aplicar` liga a conferência do prompt literal.
 
 | Resultado | Significa | O que fazer |
 | --- | --- | --- |
-| `isolamento confirmado` | o revisor não viu a palavra-código | nada; opcionalmente `hwk canario aplicar` |
-| `isolamento FALHOU` | o subagente herdou a conversa | use `hwk estrito` para revisar até investigar |
-| `NENHUM evento registrado` | hooks bloqueados, não recarregados, ou fora do harness Copilot | as guardas não estão ativas; o fluxo funciona, sem elas |
+| `isolamento confirmado` | o revisor não viu a palavra-código | nada: o init liga a conferência |
+| `isolamento FALHOU` | o subagente herdou a conversa | use `estrito` no `hwk-review` até investigar |
+| `NENHUM evento registrado` | hooks bloqueados, janela não recarregada, ou fora do harness Copilot | Reload Window e `/hwk-canario` de novo; o fluxo funciona sem as guardas |
 | `bloco do AGENTS.md chegou ao peixinho: sim` | o revisor recebe as instruções do projeto | aceitável: o bloco só roteia |
 
-`hwk canario aplicar` liga a conferência do prompt literal: daí em diante, o hook nega qualquer chamada
-a um revisor `hwk-gf-*` cujo texto não seja exatamente o prompt do pacote.
-
-Também existe o atalho `/hwk-canario` em qualquer agente com terminal.
+Com a conferência ligada, o hook nega qualquer chamada ao `hwk-gf` cujo texto não seja exatamente o
+prompt do pacote, ou cujo pacote tenha sido editado depois de gerado.
 
 ## 5. O fluxo
 
-Uma fase por chat. Cada fase tem um agente; selecione-o no seletor de agentes do Copilot Chat. O atalho
-`/hwk-*` só funciona com o agente da fase selecionado (fora dele, ele diz qual selecionar).
+Uma fase por chat. Cada fase tem um agente; selecione-o no seletor de agentes do Copilot Chat. O comando
+`/hwk-*` só funciona com o agente certo selecionado (fora dele, ele diz qual selecionar).
 
 | Fase | Agente | Atalho | Sai com |
 | --- | --- | --- | --- |
-| Intenção | `hwk` | `/hwk-start` | a rota: direto, discovery, plano |
-| Discovery | `hwk-grill` | `/hwk-grill` | `briefings/<assunto>/briefing.md` |
-| Triagem de ticket | `hwk-triagem` | `/hwk-triagem` | briefing a partir de um ticket ou bug |
+| Preparação | `hwk` | `/hwk-init` | repositório conferido, canário e OTel |
+| Intenção | `hwk` ou qualquer um com terminal | `/hwk-start` | a rota: direto, discovery, plano |
+| Discovery | `hwk-discovery` | `/hwk-grill` | `briefings/<assunto>/briefing.md` |
+| Triagem de ticket | `hwk-discovery` | `/hwk-triagem` | briefing a partir de um ticket ou bug |
 | Protótipo | `hwk-prototipo` | `/hwk-prototipo` | resposta a uma pergunta de design, fora de `src/` |
 | Plano | `hwk-plan` | `/hwk-plan` | proposta, design (Full), deltas, fatias |
 | Revisão da spec | `hwk-review` | `/hwk-review spec <id>` | vereditos e aprovação humana |
@@ -332,6 +362,39 @@ fase de cada mudança aberta, derivada dos artefatos.
 **O fluxo lê Git e não escreve Git.** Nenhum agente cria branch, commita, faz push ou abre PR. O agente
 para e diz o que fazer; você faz.
 
+### Agentes e skills: por que 9 e 16
+
+Em outubro de 2026, engenheiros da Anthropic publicaram quando vale manter um subagente e quando vale
+dobrá-lo no agente principal. A regra que adotamos: **agente separado só quando ele muda o que pode ser
+feito ou o que pode ser visto**. Procedimento (passos, roteiro de entrevista, lente de revisão) é texto
+que se carrega quando precisa: skill.
+
+| Mantido como agente | Por quê |
+| --- | --- |
+| `hwk-gf` | **verificação**: o revisor não pode ter a conversa nem as instruções do projeto, só `read` e `search` |
+| `hwk-implementador` | **contexto limpo e paralelo**: uma fatia por subagente, várias no mesmo turno |
+| `hwk-discovery`, `hwk-prototipo` | **permissão**: sem terminal e sem busca, de propósito (entrevista não vira arqueologia) |
+| `hwk-plan`, `hwk-review`, `hwk-implement`, `hwk-archive` | **permissão por fase**: cada um com as ferramentas e os subagentes da sua fase |
+| `hwk` | **entrada**: terminal, edição só em `.henriworks/estado/` e subagente só `hwk-gf` (para o canário) |
+
+O que virou skill:
+
+- **O maestro.** A rota ("qual o próximo passo?") era um agente; virou `/hwk-start`, que roda em
+  qualquer agente com terminal. O agente `hwk` ficou como porta de entrada do `/hwk-init` e dos utilitários.
+- **Grill e triagem.** Eram dois agentes com as mesmas ferramentas; viraram um agente (`hwk-discovery`)
+  e dois procedimentos (`/hwk-grill`, `/hwk-triagem`). Sem comando, o agente escolhe pela primeira mensagem.
+- **Os sete peixinhos.** Eram sete agentes com as mesmas ferramentas; viraram um (`hwk-gf`). A lente
+  (zoom-out, compreensão, design, prontidão, spec, padrões, plantão) vai **dentro do pacote**, gerado por
+  script. Como o hook confere o hash do pacote, persona e pedido chegam juntos e intactos. Cada revisão
+  continua sendo um subagente novo.
+
+Trade-off, sem enfeite: o ganho é de **superfície e manutenção** (16 → 9 agentes no seletor, cada lente
+num lugar só, texto de agentes de ~6,4 mil para ~4,1 mil palavras), não de token por sessão. Uma
+sessão de discovery carrega agente + skill, um pouco mais do que o agente antigo carregava sozinho.
+Não dobramos o `hwk-implementador` nem o `hwk-gf` no agente principal: os dois existem para isolar
+contexto, e é isso que o artigo diz para manter. Qualquer consolidação além desta só depois de medir
+com evals.
+
 ### Rigor
 
 - **Lite** (padrão): proposta e fatias. Revisão da spec com dois revisores (design e prontidão).
@@ -342,9 +405,9 @@ para e diz o que fazer; você faz.
 ### Exemplo curto
 
 ```
-[agente hwk]          quero que o extrato mostre o saldo projetado do mês
+[agente hwk]          /hwk-start quero que o extrato mostre o saldo projetado do mês
                       → rota: discovery
-[agente hwk-grill]    /hwk-grill saldo projetado no extrato
+[agente hwk-discovery]/hwk-grill saldo projetado no extrato
                       → .henriworks/briefings/saldo-projetado/briefing.md
 [agente hwk-plan]     /hwk-plan .henriworks/briefings/saldo-projetado/briefing.md
                       → .henriworks/changes/mostrar-saldo-projetado/ (Lite, 4 fatias)
@@ -368,8 +431,9 @@ que leu a conversa tem o mesmo ponto cego.
 Três papéis:
 
 - **Elefante**: o agente da fase. Tem o projeto e a conversa; planeja e implementa.
-- **Peixinho**: um agente `hwk-gf-*` com só `read` e `search`, chamado como subagente. Recebe uma linha
-  apontando para um **pacote de revisão** e lê só o que o pacote lista.
+- **Peixinho**: o agente `hwk-gf`, com só `read` e `search` e sem instruções do projeto, chamado como
+  subagente novo a cada revisão. Recebe uma linha apontando para um **pacote de revisão** e lê só o que
+  o pacote lista. A **lente** daquela revisão (o que procurar e com que severidade) está no pacote.
 - **Humano**: resolve trade-off, aprova a spec, commita, abre a PR.
 
 O caminho de uma revisão:
@@ -383,7 +447,7 @@ O caminho de uma revisão:
 O veredito da spec fica preso ao hash da spec: mudou o texto, a aprovação deixa de valer. O veredito de
 código fica preso ao HEAD.
 
-| Revisão | Revisores |
+| Revisão | Lentes (uma por subagente `hwk-gf` novo) |
 | --- | --- |
 | Spec, Lite | design, prontidão |
 | Spec, Full | zoom-out, compreensão, design, zoom-out (2ª rodada), prontidão |
@@ -477,7 +541,7 @@ Duas fontes, as duas fora de qualquer repositório, em `~/.henriworks/uso/` (ou 
 
 ```bash
 node .henriworks/bin/uso.mjs configurar            # mostra se está ligado e como ligar
-node .henriworks/bin/uso.mjs configurar --aplicar  # Windows: grava as variáveis no seu usuário
+node .henriworks/bin/uso.mjs configurar --aplicar  # Windows: setx no usuário; macOS e Linux: bloco marcado no ~/.zshrc ou ~/.bashrc
 ```
 
 Ou, nas configurações do VS Code: `github.copilot.chat.otel.enabled`, exportador `file` e o arquivo de
@@ -510,32 +574,50 @@ O orçamento só avisa, no início da sessão; nunca bloqueia.
 `captureContent` do OTel continua desligado. Os dados são do seu usuário, na sua máquina. Antes de
 consolidar uso de várias pessoas, confirme com a área responsável por LGPD.
 
-**Custo** é estimado com a tabela `.henriworks/config/precos.json` (data no próprio arquivo). Nenhum
+**Custo** é estimado com a tabela de preços (seção Modelos e preços, abaixo; data no próprio arquivo). Nenhum
 agente estima token ou custo: número que não veio de script não aparece.
 
-### Modelos liberados
+### Modelos e preços
 
-Quais modelos a empresa liberou vem da API oficial de política de modelos do GitHub (GA em 19/10/2026):
-`GET /orgs/{org}/copilot/model-policies` ou `GET /enterprises/{enterprise}/copilot/model-policies`. As
-duas exigem permissão de admin. Por isso o desenho tem duas pontas:
+Os dois vêm **dentro do pacote** e se atualizam com ele. Não há pasta separada nem passo manual.
+
+| Arquivo (gerenciado) | O que é |
+| --- | --- |
+| `.henriworks/config/precos.json` | US$ por 1M tokens (créditos do seletor ÷ 100). 15 modelos do seletor de 09/11/2026, mais os antigos (`legado`) para reprecificar o histórico. Copilot Fusion e HydraFusion ficam como `semPreco`: a tela não mostra preço |
+| `.henriworks/config/modelos-referencia.json` | os 17 modelos do seletor (VS Code > Language Models) em 09/11/2026 |
+
+Sem nenhuma configuração, a pós-instalação e o `/hwk-init` carregam a lista de referência. Ela é um
+**retrato**, não a política viva do time: não vence, e o cabeçalho diz que é a referência do pacote.
+
+**Preço de acordo enterprise.** Copie `precos.json` para `~/.henriworks/uso/precos.json` e ajuste. A
+cópia do usuário vence a do pacote em todos os repositórios da máquina. Se ela não tiver nenhum preço
+diferente do pacote, o `/hwk-init` avisa que dá para apagar, para as próximas tabelas do pacote valerem.
+JSON inválido na sua cópia não derruba o painel: o HenriWorks cai para a tabela do pacote e avisa.
+
+**Política viva do time.** Quais modelos a empresa liberou vem da API oficial de política de modelos do
+GitHub: `GET /orgs/{org}/copilot/model-policies` ou `GET /enterprises/{enterprise}/copilot/model-policies`.
+As duas exigem owner da org ou o papel `read_enterprise_ai_controls` na enterprise. **Não crie token com
+`admin:org` na sua máquina.** O desenho tem duas pontas:
 
 1. **Um job, com a credencial.** O time de plataforma roda `modelos gerar` num job agendado, num
    repositório interno, e publica `modelos-liberados.json`. O modelo do job está em
    `extras/modelos-liberados.yml` neste pacote: usa um GitHub App só de leitura, só faz commit quando a
    política muda (ou uma vez a cada 5 dias, para a lista não vencer).
-2. **Cada dev, só leitura.** `modelos atualizar` lê esse JSON com o `gh` que você já usa e guarda uma
-   cópia em `~/.henriworks/uso/modelos/`. Ninguém do time precisa de token de admin.
+2. **Cada dev, só leitura.** Com `"modelos": { "fonte": "gh:<org>/<repo>/modelos-liberados.json" }` em
+   `.henriworks/henriworks.json`, `modelos atualizar` lê esse JSON com o `gh` que você já usa. Ninguém
+   do time precisa de token de admin.
 
 ```bash
-node .henriworks/bin/modelos.mjs atualizar --de gh:<org>/<repo>/modelos-liberados.json   # uma vez
-node .henriworks/bin/modelos.mjs                     # liberados × usados × preço, no terminal
+node .henriworks/bin/modelos.mjs                     # lista × uso × preço, no terminal
+node .henriworks/bin/modelos.mjs atualizar           # da fonte configurada; sem fonte, da referência do pacote
 node .henriworks/bin/modelos.mjs conferir            # código 1 se houver alerta grave
 ```
 
-Fixe a fonte em `.henriworks/henriworks.json` (`"modelos": { "fonte": "gh:..." }`) ou na variável
-`HENRIWORKS_MODELOS_FONTE`; a pós-instalação já atualiza a lista quando a fonte existe. Fontes aceitas:
-`gh:<dono>/<repo>/<caminho>[@ref]`, `api:org/<org>` ou `api:enterprise/<ent>` (direto na API, para quem
-é admin), URL `https://` (tenta `fetch` e depois `curl`, que respeita `HTTPS_PROXY`) e caminho de arquivo.
+Fontes aceitas em `modelos.fonte`, `--de` ou `HENRIWORKS_MODELOS_FONTE`: `gh:<dono>/<repo>/<caminho>[@ref]`,
+`api:org/<org>` ou `api:enterprise/<ent>` (direto na API, para quem é admin), URL `https://` (tenta
+`fetch` e depois `curl`, que respeita `HTTPS_PROXY`) e caminho de arquivo. As rotas do `gh` vão sem `/`
+no começo, para o Git Bash não converter o caminho; um 403 da API vira uma mensagem que explica a
+permissão e aponta a lista do pacote.
 
 O cruzamento marca, por modelo:
 
@@ -543,8 +625,9 @@ O cruzamento marca, por modelo:
 | --- | --- | --- |
 | usado sem preço na tabela | grave | o custo dele conta como zero no painel e no registro |
 | usado, mas bloqueado na política | grave | lista desatualizada, ou acesso dado por time; confira antes de confiar |
-| usado, mas fora da lista | atenção | modelo novo que a política ainda não lista |
+| usado, mas fora da lista | atenção | modelo novo que a lista ainda não tem, ou `id` diferente do que o OTel grava |
 | liberado sem preço na tabela | atenção | o primeiro uso vai sair com custo zero: atualize `precos.json` |
+| usado ou liberado, `semPreco` declarado | atenção ou info | Fusion e HydraFusion: a tela não mostra preço |
 | liberado, sem uso no período | info | candidato a revisão de política, ou a modelo por fase |
 
 `conferir` também lê o `model:` dos agentes (do repositório e do usuário) e falha se nenhum dos modelos
@@ -595,15 +678,15 @@ Para versionar os artefatos no futuro, quando a política permitir: `"versionarA
 | `bloquearGitNoAgente` | `false` | o hook nega commit, push, merge, rebase, reset e afins pelo terminal de qualquer agente do workspace |
 | `conhecimento` | `"conhecimento/"` | pasta do registro versionado |
 | `ticket.padrao` | `[A-Z][A-Z0-9]+-\d+` | como achar a chave do Jira na branch |
-| `revisaoIsolada.conferirPacote` | `"off"` | `"negar"` depois de `hwk canario aplicar` |
+| `revisaoIsolada.conferirPacote` | `"off"` | `"negar"` depois que o canário passa (o `/hwk-init` liga) |
 | `revisaoIsolada.modoEstrito` | `false` | reservado: revisão pelo Copilot CLI por padrão |
 | `sobreposicao.travaArquivo` | `"off"` | trava de arquivo entre fatias paralelas (experimental) |
 | `mapa.primeiroAntesDeBusca` | `"negar-uma-vez"` | `"off"` desliga a sugestão do mapa |
 | `mapa.orcamentoSaida` | `2000` | caracteres por resposta do mapa |
 | `uso.coletar` | `true` | coleta dos hooks |
 | `uso.alertas` | `[0.5, 0.8, 1.0]` | limiares do aviso de orçamento |
-| `modelos.fonte` | `null` | de onde ler a lista de modelos liberados (seção 9) |
-| `modelos.validadeDias` | `7` | idade a partir da qual a lista é tratada como vencida |
+| `modelos.fonte` | `null` | de onde ler a política viva de modelos; `null` usa a referência do pacote (seção 9) |
+| `modelos.validadeDias` | `7` | idade a partir da qual a lista de uma fonte é tratada como vencida (a referência do pacote não vence) |
 
 Outros arquivos seus: `verificacao.json` (camadas e comandos), `padroes.md` (regras auditáveis),
 `glossario.md` (linguagem do domínio), `executores.json` (quem executa fatias).
@@ -626,6 +709,7 @@ Rode da raiz do repositório. `hwk` abaixo é `node .henriworks/bin/hwk.mjs`.
 | `hwk conhecimento <pasta> --pr <n>` | esqueleto do registro versionado |
 | `hwk ticket [CHAVE \| --limpar]` | ticket da sessão |
 | `hwk adotar [--aplicar]` | cópia única do `.sdd/` |
+| `hwk init [--corrigir] [--json]` | confere a instalação e corrige o seguro (base do `/hwk-init`) |
 | `hwk canario preparar \| conferir \| aplicar` | prova do isolamento e dos hooks |
 | `hwk estrito <id> <alvo>` | revisor pelo Copilot CLI |
 | `node .henriworks/bin/verificar.mjs <id> [--salvar]` | lint, teste e build só no que a mudança tocou |
@@ -633,8 +717,15 @@ Rode da raiz do repositório. `hwk` abaixo é `node .henriworks/bin/hwk.mjs`.
 | `node .henriworks/bin/uso.mjs ...` | uso e custo (seção 9) |
 | `node .henriworks/bin/modelos.mjs [atualizar\|conferir\|gerar]` | modelos liberados × usados × preço (seção 9) |
 
-Atalhos utilitários, em qualquer agente com terminal: `/hwk-canario`, `/hwk-ticket`, `/hwk-adotar`,
-`/hwk-mapa`, `/hwk-uso`, `/hwk-modelos`.
+Os 16 comandos e onde rodam:
+
+| Comando | Agente | Tipo |
+| --- | --- | --- |
+| `/hwk-init`, `/hwk-canario` | `hwk` | procedimento |
+| `/hwk-start` | qualquer um com terminal | procedimento |
+| `/hwk-grill`, `/hwk-triagem` | `hwk-discovery` | procedimento |
+| `/hwk-prototipo`, `/hwk-plan`, `/hwk-review`, `/hwk-implement`, `/hwk-archive`, `/hwk-fechar` | o da fase | atalho: o passo a passo está no agente |
+| `/hwk-ticket`, `/hwk-adotar`, `/hwk-mapa`, `/hwk-uso`, `/hwk-modelos` | qualquer um com terminal | utilitário |
 
 Nesta versão os atalhos se chamam `/hwk-*`. Quando o HenriWorks for distribuído como plugin, os mesmos
 comandos virão como `/hwk:*`.
@@ -646,14 +737,17 @@ comandos virão como `/hwk:*`.
 | Agente `hwk-*` não aparece no seletor | harness diferente de Copilot, ou janela não recarregada | selecione o harness Copilot e recarregue a janela |
 | Atalho `/hwk-x` responde "selecione o agente" | o agente da fase não está selecionado | selecione o agente que ele indica, num chat novo |
 | `CONFLITO` no instalador | você alterou um arquivo gerenciado | compare com o pacote; `--forcar` sobrescreve com backup |
-| Canário: `NENHUM evento registrado` | hooks bloqueados por política, ou janela não recarregada | recarregue; se persistir, o fluxo funciona sem as guardas |
+| Canário: `NENHUM evento registrado` | hooks bloqueados por política, ou janela não recarregada | Reload Window e `/hwk-canario`; se persistir, o fluxo funciona sem as guardas |
+| `/hwk-init` responde "selecione o agente hwk" | o chat está em outro agente | chat novo, agente `hwk` |
+| Agentes `hwk-grill`, `hwk-triagem` ou `hwk-gf-*` ainda no seletor | instalação anterior à consolidação, ou arquivo alterado | rode o instalador de novo; se ele disser que manteve o alterado, apague à mão |
 | Revisão "não há como criar subagente" | ferramenta de subagente desligada | habilite subagentes no Copilot Chat; ou use `hwk estrito` |
 | Busca negada com "consulte o mapa" | primeira busca da sessão sem consulta ao mapa | consulte o mapa; a próxima busca passa. Desligue com `mapa.primeiroAntesDeBusca: "off"` |
 | `henrimap status` sem L2 de TS | `typescript` não está no `node_modules` do projeto | rode o `npm install` do projeto; o mapa segue em L1 |
 | `henrimap status` sem `jdeps` | JDK fora do PATH, ou projeto Java não compilado | compile (`target/classes`) e ponha o JDK no PATH |
 | Painel de uso sem token nem custo | OTel desligado | `uso.mjs configurar` (seção 9) |
 | `modelos atualizar`: "gh não encontrado" ou 404 | sem GitHub CLI, sem `gh auth login`, ou sem acesso ao repositório da lista | instale o `gh`, autentique, peça leitura no repositório interno |
-| `modelos gerar`: 403 ou 404 | o token não tem permissão de admin na org ou enterprise | rode no job do time de plataforma, não na sua máquina |
+| `modelos gerar` ou `api:`: 403 | o token não tem owner da org nem `read_enterprise_ai_controls` | não crie token admin: use a lista do pacote ou o JSON do job de plataforma |
+| `gh api` no Git Bash vira `C:/Program Files/Git/orgs/...` | conversão de caminho do MSYS | o HenriWorks já manda a rota sem `/`; no seu terminal, use `MSYS_NO_PATHCONV=1` |
 | Modelo usado aparece "bloqueado" | lista velha ou acesso por time | `modelos atualizar`; se persistir, fale com quem administra o Copilot |
 | Proxy corporativo | nada no HenriWorks usa rede | nenhum ajuste necessário |
 | Instalação global: o revisor pede permissão para ler um arquivo | a referência de eixos fica em `~/.copilot/skills`, fora do workspace | aprove a leitura, ou instale no repositório |
@@ -663,7 +757,8 @@ comandos virão como `/hwk:*`.
 
 - **Agente (custom agent)**: arquivo `.agent.md` que define instruções e ferramentas de uma persona do
   Copilot Chat.
-- **Skill**: pasta com `SKILL.md`; aqui, usada como atalho `/hwk-*`.
+- **Skill**: pasta com `SKILL.md`; aqui, um comando `/hwk-*`. Carrega procedimento quando é chamada; o agente define as ferramentas.
+- **Lente**: o que um revisor procura numa revisão (design, prontidão, plantão...). Vai dentro do pacote.
 - **Subagente**: agente chamado por outro, num contexto novo.
 - **Hook**: comando que o VS Code roda em eventos da sessão (início, antes e depois de ferramenta).
 - **Mudança (change)**: uma unidade de trabalho, em `.henriworks/changes/<id>/`.

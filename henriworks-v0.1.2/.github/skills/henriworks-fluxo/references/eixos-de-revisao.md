@@ -1,6 +1,6 @@
 # Eixos de revisão
 
-Referência do `hwk-review` e dos peixinhos `hwk-gf-*`. Leia apenas nessas fases.
+Referência do `hwk-review` e do peixinho `hwk-gf`. Leia apenas nessas fases.
 
 ## Por que isolado
 
@@ -41,13 +41,13 @@ Lite: `design` (com a lente de zoom-out), depois `prontidao`. Full: `zoom-out`, 
 `zoom-out-2`, `prontidao`, nesta ordem. Estruturação e estilo não são estágio: formato é portão do
 `hwk validar`, e o validador já rodou.
 
-| Estágio | Persona | Pergunta |
+| Estágio | Lente no pacote | Pergunta |
 | --- | --- | --- |
-| `zoom-out` | `hwk-gf-zoom-out` | precisa existir? há algo mais simples, ou já existente, que resolve? |
-| `compreensao` | `hwk-gf-compreensao` | alguém sem contexto entende o que e por quê, sem perguntar? |
-| `design` | `hwk-gf-design` | onde isso quebra: risco, carga, custo, acoplamento, contrato entre camadas |
-| `zoom-out-2` | `hwk-gf-zoom-out` | depois dos ajustes, a solução cresceu além do problema? |
-| `prontidao` | `hwk-gf-prontidao` | cada fatia executa sem decisão pendente, num contexto novo, só com os ponteiros? |
+| `zoom-out` | `zoom-out` | precisa existir? há algo mais simples, ou já existente, que resolve? |
+| `compreensao` | `compreensao` | alguém sem contexto entende o que e por quê, sem perguntar? |
+| `design` | `design` | onde isso quebra: risco, carga, custo, acoplamento, contrato entre camadas |
+| `zoom-out-2` | `zoom-out` | depois dos ajustes, a solução cresceu além do problema? |
+| `prontidao` | `prontidao` | cada fatia executa sem decisão pendente, num contexto novo, só com os ponteiros? |
 
 O veredito da spec é amarrado ao **hash da spec** (proposta, design, deltas e texto das fatias, sem as
 marcas de checklist). Spec alterada depois da revisão invalida o veredito daquela versão; quem decide se
@@ -71,7 +71,7 @@ Antes dos pacotes, o orquestrador roda `node .henriworks/bin/verificar.mjs <id> 
 para `revisao/verificacao-<HEAD>.txt` e é a única fonte de lint, tipos e testes. Nenhum peixinho roda
 ferramenta nem reclassifica a saída.
 
-### Eixo spec (`hwk-gf-spec`)
+### Eixo spec (lente `spec`)
 
 Lê a proposta, as fatias, os deltas, o design, o diff e a verificação.
 
@@ -89,7 +89,7 @@ Lê a proposta, as fatias, os deltas, o design, o diff e a verificação.
 Reprova com: critério não coberto ou sem teste; tarefa sem evidência; fatia que não demonstra; escopo
 além da proposta; restrição violada; achado em delta ou decisão; BLOQUEANTE na verificação.
 
-### Eixo padrões (`hwk-gf-padroes`)
+### Eixo padrões (lente `padroes`)
 
 Não lê a proposta, de propósito: sem ela, não há como racionalizar uma violação como "necessária para o
 critério 3". Lê o diff, `.henriworks/padroes.md`, as instructions cujo `applyTo` casa com o diff (o pacote
@@ -109,7 +109,7 @@ dado exposto entre camadas no formato interno de quem produz; artefato compartil
 camadas criado sem justificativa; erro engolido; valor mágico repetido; nome de mecanismo em vez de
 propósito; teste que afirma chamada em vez de consequência.
 
-### Eixo plantão (`hwk-gf-plantao`)
+### Eixo plantão (lente `plantao`)
 
 O sênior que vai ser acordado quando quebrar. Lê o diff, o raio de impacto do mapa e a verificação, e o
 código que o diff toca: chamadores de cada função alterada, o que ela chama, os testes.

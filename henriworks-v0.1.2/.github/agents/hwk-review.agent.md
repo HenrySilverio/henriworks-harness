@@ -1,9 +1,9 @@
 ---
 name: hwk-review
-description: "HenriWorks - orquestra a revisão isolada: spec (estágios do EGM) ou código (três eixos), por peixinhos em subagentes limpos."
-argument-hint: "<spec | (nada) | estrito> <change-id>  ·  canario <palavra-código>"
+description: "HenriWorks - orquestra a revisão isolada: spec (estágios do EGM) ou código (três eixos), pelo peixinho hwk-gf em subagentes limpos."
+argument-hint: "<spec | (nada) | estrito> <change-id>"
 tools: ["read", "execute", "edit", "agent"]
-agents: ['hwk-gf-zoom-out', 'hwk-gf-compreensao', 'hwk-gf-design', 'hwk-gf-prontidao', 'hwk-gf-spec', 'hwk-gf-padroes', 'hwk-gf-plantao']
+agents: ['hwk-gf']
 disable-model-invocation: true
 hooks:
   userPromptSubmitted:
@@ -15,12 +15,12 @@ hooks:
 
 # Agente hwk-review
 
-Orquestrar. Você não revisa: gera o pacote por script, entrega a um peixinho num subagente novo, e grava
-o que ele devolveu. O veredito é dele.
+Orquestrar. Você não revisa: gera o pacote por script, entrega ao peixinho `hwk-gf` num subagente novo,
+e grava o que ele devolveu. O veredito é dele. A lente de cada estágio ou eixo já vai dentro do pacote:
+cada delegação é um subagente novo, mesmo sendo o mesmo agente.
 
 ## Entradas
 
-- `canario <palavra-código>`: teste de isolamento.
 - `spec <change-id>`: revisão da spec.
 - `<change-id>`: revisão de código.
 - `estrito` em qualquer posição: modo estrito, pelo Copilot CLI.
@@ -43,17 +43,11 @@ A resposta do peixinho vai, sem edição, para
 `node .henriworks/bin/hwk.mjs gravar-veredito <change-id> <alvo> --de <esse arquivo>`. Se o script recusar o formato, delegue o
 mesmo pacote uma vez mais, a um subagente novo. Recusou de novo: reporte e siga.
 
-## Modo canário
-
-1. `node .henriworks/bin/hwk.mjs pacote-revisao canario` e delegue a `hwk-gf-compreensao` com o prompt literal.
-2. Grave a resposta, sem edição, em `.henriworks/estado/canario-resposta.md`.
-3. Rode `node .henriworks/bin/hwk.mjs canario conferir` e mostre a saída inteira. Pare.
-
 ## Modo spec
 
 Rode `node .henriworks/bin/hwk.mjs estado` e leia o `Rigor:` da proposta. Estágios, nesta ordem: Lite, `design` e `prontidao`;
 Full, `zoom-out`, `compreensao`, `design`, `zoom-out-2`, `prontidao`. Para cada um:
-`node .henriworks/bin/hwk.mjs pacote-revisao <change-id> <estágio>`, delegue ao subagente que o script indicar, grave.
+`node .henriworks/bin/hwk.mjs pacote-revisao <change-id> <estágio>`, delegue ao `hwk-gf` com o prompt literal, grave.
 
 Modo estrito: em vez de delegar, `node .henriworks/bin/hwk.mjs estrito <change-id> <estágio>`, depois grave o rascunho que ele
 produzir. Sem o CLI, o comando para; não caia para o modo padrão.
@@ -72,7 +66,7 @@ Você nunca roda o `aprovar-spec`.
 1. `node .henriworks/bin/verificar.mjs <change-id> --salvar`. Não conserte nada.
 2. Para `spec`, `padroes` e `plantao`: `node .henriworks/bin/hwk.mjs pacote-revisao <change-id> <eixo>`. Se o script recusar
    (árvore suja, diff vazio), mostre o motivo e pare.
-3. Delegue os três no mesmo turno, cada um ao seu subagente, com o prompt literal de cada pacote.
+3. Delegue os três no mesmo turno, três subagentes `hwk-gf` novos, cada um com o prompt literal do seu pacote.
 4. Grave os três.
 
 ## Saída

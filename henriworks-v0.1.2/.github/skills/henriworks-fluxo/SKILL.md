@@ -65,8 +65,9 @@ suposição que ele mesmo não escreveu.
 
 | Fase | Agente | Portão que fecha a fase |
 | --- | --- | --- |
-| Intenção | `hwk` | o dev confirma a rota |
-| Discovery | `hwk-grill`, `hwk-triagem`, `hwk-prototipo` | lacuna bloqueante impede gravar o briefing |
+| Preparação | `hwk` (`/hwk-init`) | `hwk init` sem GRAVE e canário conferido |
+| Intenção | qualquer agente com terminal (`/hwk-start`) | o dev confirma a rota |
+| Discovery | `hwk-discovery` (`/hwk-grill`, `/hwk-triagem`), `hwk-prototipo` | lacuna bloqueante impede gravar o briefing |
 | Plano | `hwk-plan` | `hwk validar` sem erro |
 | Revisão da spec | `hwk-review` (spec) | humano: `hwk aprovar-spec <id> --por "<nome>"` |
 | Implementação | `hwk-implement` → `hwk-implementador` ou executor externo | o dev revisa e commita cada sessão |
@@ -103,7 +104,7 @@ nomes vira pergunta. Termo resolvido entra em `.henriworks/glossario.md`, uma li
 se evita. O plano e os revisores usam esse vocabulário; isso encurta todo texto daí em diante.
 
 **Rodadas.** Uma rodada agrupa as perguntas cujos pré-requisitos já foram respondidos: no máximo cinco,
-numeradas. Limite de rodadas: quatro no `hwk-grill`, três no `hwk-triagem`. Ao fim de cada rodada, no
+numeradas. Limite de rodadas: quatro no `/hwk-grill`, três no `/hwk-triagem`. Ao fim de cada rodada, no
 máximo três linhas confirmando o que já está fechado. Antes de conduzir, leia
 `references/tecnica-grilling.md`.
 
@@ -229,11 +230,12 @@ vez que carrega; regra em código custa zero.
 
 ## 10. Revisão isolada
 
-O peixinho é um custom agent `hwk-gf-*` com `tools: [read, search]`, chamado como subagente. Ele
-**nunca** recebe texto escrito pelo orquestrador. O caminho é sempre:
+O peixinho é um custom agent, `hwk-gf`, com `tools: [read, search]` e sem instruções do projeto,
+chamado como subagente novo a cada revisão. A lente de cada estágio ou eixo não é outro agente: vem no
+pacote, gerada por script. Ele **nunca** recebe texto escrito pelo orquestrador. O caminho é sempre:
 
 1. `node .henriworks/bin/hwk.mjs pacote-revisao <id> <alvo>` gera o pacote e imprime o prompt literal.
-2. O orquestrador delega ao subagente indicado com **exatamente** esse prompt, sem uma palavra a mais.
+2. O orquestrador delega ao `hwk-gf` com **exatamente** esse prompt, sem uma palavra a mais.
    Quando a conferência estiver ligada, o hook nega qualquer outro texto.
 3. A resposta vai para `.henriworks/changes/<id>/rascunhos/<alvo>.md`, sem edição.
 4. `node .henriworks/bin/hwk.mjs gravar-veredito <id> <alvo> --de <rascunho>` grava, nunca sobrescreve.
@@ -242,11 +244,11 @@ Se não houver como criar subagente, a revisão **para** e diz isso. Revisão no
 revisão, e não existe substituto silencioso. O modo estrito (`hwk estrito <id> <alvo>`) roda o revisor
 num processo separado do Copilot CLI, sem instruções do projeto.
 
-| Revisão | Alvos | Peixinhos |
-| --- | --- | --- |
-| Spec, Lite | `design`, `prontidao` | `hwk-gf-design`, `hwk-gf-prontidao` |
-| Spec, Full | `zoom-out`, `compreensao`, `design`, `zoom-out-2`, `prontidao`, nesta ordem | os quatro de spec |
-| Código | `spec`, `padroes`, `plantao` | `hwk-gf-spec`, `hwk-gf-padroes`, `hwk-gf-plantao` |
+| Revisão | Alvos (uma lente por subagente `hwk-gf` novo) |
+| --- | --- |
+| Spec, Lite | `design`, `prontidao` |
+| Spec, Full | `zoom-out`, `compreensao`, `design`, `zoom-out-2`, `prontidao`, nesta ordem |
+| Código | `spec`, `padroes`, `plantao`, no mesmo turno |
 
 Regras dos eixos, vereditos e registro: `references/eixos-de-revisao.md`.
 

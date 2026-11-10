@@ -17,9 +17,10 @@ import { createInterface } from 'node:readline';
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { join, basename, dirname } from 'node:path';
+import { homedir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { USO_DIR, lerJson, gravarJson, anexarJsonl, linhasDe, branchAtual, mudancaDaBranch, metadados, CHANGES, ARCHIVE, config } from './lib/comum.mjs';
-import { precos, custo, lerTodos, lerLiberados, cruzar, estadoTexto, idadeDias } from './lib/modelos.mjs';
+import { precos, custo, lerTodos, lerLiberados, cruzar, estadoTexto, idadeDias, vencida as listaVencida, ehReferencia } from './lib/modelos.mjs';
 
 const AQUI = dirname(fileURLToPath(import.meta.url));
 const OTEL_PADRAO = join(USO_DIR, 'otel', 'copilot-otel.jsonl');
@@ -28,26 +29,48 @@ const mes = (t) => String(t).slice(0, 7);
 
 // --------------------------------------------------------------- configurar
 
-function configurar({ aplicar }) {
+// Estado do exportador: variável no processo atual, ou arquivo do OTel recebendo dados nos últimos 7
+// dias (o VS Code pode ter a variável mesmo quando este terminal não tem).
+function estadoOtel() {
   const arq = otelArquivo();
-  const ligado = process.env.COPILOT_OTEL_ENABLED === 'true' || Boolean(process.env.COPILOT_OTEL_FILE_EXPORTER_PATH);
-  console.log(`uso: dados em ${USO_DIR}; OTel ${ligado ? `ligado (${arq})` : 'DESLIGADO: sem token, modelo e custo, só eventos dos hooks'}`);
-  if (ligado && !aplicar) return;
+  const ambiente = process.env.COPILOT_OTEL_ENABLED === 'true' || Boolean(process.env.COPILOT_OTEL_FILE_EXPORTER_PATH);
+  let recente = false;
+  try { recente = existsSync(arq) && Date.now() - statSync(arq).mtimeMs < 7 * 864e5 && statSync(arq).size > 0; } catch { /* sem arquivo */ }
+  return { arq, ambiente, recente, ligado: ambiente || recente };
+}
+
+function arquivoDoShell() {
+  const sh = basename(process.env.SHELL || '');
+  return join(homedir(), sh === 'zsh' || (process.platform === 'darwin' && !sh) ? '.zshrc' : sh === 'fish' ? '.config/fish/config.fish' : '.bashrc');
+}
+
+function configurar({ aplicar }) {
+  const o = estadoOtel();
+  console.log(`uso: dados em ${USO_DIR}; OTel ${o.ligado ? `ligado (${o.arq}${o.ambiente ? '' : ', visto pelo arquivo'})` : 'DESLIGADO: sem token, modelo e custo, só eventos dos hooks'}`);
+  if (o.ligado && !aplicar) return;
   const win = process.platform === 'win32';
-  const cmds = win
-    ? [['setx', ['COPILOT_OTEL_ENABLED', 'true']], ['setx', ['COPILOT_OTEL_FILE_EXPORTER_PATH', OTEL_PADRAO]]]
-    : null;
-  if (aplicar && win) {
+  if (aplicar) {
     mkdirSync(dirname(OTEL_PADRAO), { recursive: true });
-    for (const [c, a] of cmds) spawnSync(c, a, { stdio: 'ignore' });
-    console.log('variáveis de usuário gravadas. Feche e abra o VS Code para valer.');
+    if (win) {
+      for (const [k, v] of [['COPILOT_OTEL_ENABLED', 'true'], ['COPILOT_OTEL_FILE_EXPORTER_PATH', OTEL_PADRAO]]) spawnSync('setx', [k, v], { stdio: 'ignore' });
+      console.log('variáveis de usuário gravadas (setx). Feche e abra o VS Code para valer.');
+      return;
+    }
+    const rc = arquivoDoShell();
+    const atual = existsSync(rc) ? readFileSync(rc, 'utf8') : '';
+    if (atual.includes('# >>> henriworks otel')) { console.log(`${rc} já tem o bloco do HenriWorks. Feche e abra o VS Code se ainda não fez.`); return; }
+    const fish = rc.endsWith('config.fish');
+    const bloco = fish
+      ? `\n# >>> henriworks otel\nset -gx COPILOT_OTEL_ENABLED true\nset -gx COPILOT_OTEL_FILE_EXPORTER_PATH "${OTEL_PADRAO}"\n# <<< henriworks otel\n`
+      : `\n# >>> henriworks otel\nexport COPILOT_OTEL_ENABLED=true\nexport COPILOT_OTEL_FILE_EXPORTER_PATH="${OTEL_PADRAO}"\n# <<< henriworks otel\n`;
+    mkdirSync(dirname(rc), { recursive: true });
+    writeFileSync(rc, atual.replace(/\s*$/, '\n') + bloco);
+    console.log(`bloco gravado em ${rc} (entre "# >>> henriworks otel" e "# <<< henriworks otel"; para desfazer, apague o bloco). Feche e abra o VS Code: no macOS e no Linux ele lê o ambiente do shell ao abrir.`);
     return;
   }
   console.log([
     'Para ligar (uma vez por máquina; captureContent continua desligado):',
-    win
-      ? `  node .henriworks/bin/uso.mjs configurar --aplicar    (grava COPILOT_OTEL_ENABLED e COPILOT_OTEL_FILE_EXPORTER_PATH no seu usuário)`
-      : `  export COPILOT_OTEL_ENABLED=true\n  export COPILOT_OTEL_FILE_EXPORTER_PATH="${OTEL_PADRAO}"   (no seu ~/.bashrc ou ~/.zshrc)`,
+    `  node .henriworks/bin/uso.mjs configurar --aplicar    (${win ? 'grava COPILOT_OTEL_ENABLED e COPILOT_OTEL_FILE_EXPORTER_PATH no seu usuário, com setx' : `acrescenta as duas variáveis em ${arquivoDoShell()}, num bloco marcado`})`,
     '  ou, nas configurações do VS Code: github.copilot.chat.otel.enabled=true, exporterType=file, outfile=<caminho acima>',
   ].join('\n'));
 }
@@ -252,7 +275,7 @@ function alerta() {
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 
 // Fase do fluxo pelo agente principal da sessão (o custom agent selecionado, registrado pelo hook escopado).
-const FASE = { hwk: 'Intenção', 'hwk-grill': 'Discovery', 'hwk-triagem': 'Discovery', 'hwk-prototipo': 'Discovery', 'hwk-plan': 'Plano', 'hwk-review': 'Revisão', 'hwk-implement': 'Implementação', 'hwk-archive': 'Archive' };
+const FASE = { hwk: 'Intenção', 'hwk-discovery': 'Discovery', 'hwk-grill': 'Discovery', 'hwk-triagem': 'Discovery', 'hwk-prototipo': 'Discovery', 'hwk-plan': 'Plano', 'hwk-review': 'Revisão', 'hwk-implement': 'Implementação', 'hwk-archive': 'Archive' };
 const ORDEM_FASE = ['Intenção', 'Discovery', 'Plano', 'Revisão', 'Implementação', 'Archive', 'fora do fluxo'];
 const faseDa = (s) => { for (const a of s?.agentes || []) if (FASE[a]) return FASE[a]; return 'fora do fluxo'; };
 
@@ -427,10 +450,10 @@ async function painel() {
   const pillEstado = (r) => (r.libera === true ? 'ok' : r.libera === false ? 'off' : r.estado ? 'warn' : 'off');
   const sevPill = { crit: 'crit', warn: 'warn', info: 'info' };
   const idade = idadeDias(lista);
-  const vencida = lista && idade > cfg.modelos.validadeDias;
+  const vencida = listaVencida(lista, cfg);
   const contar = (f) => mods.filter(f).length;
   const cabMod = lista
-    ? `<p class="hp-mcab"><span>Política de ${esc(lista.escopo || 'escopo não informado')}, obtida em ${esc(new Date(lista.obtidoEm).toLocaleDateString('pt-BR'))}${vencida ? ` <span class="hp-pill hp-pill--warn">vencida: ${fmt(idade)} dias</span>` : ''} · uso dos últimos 30 dias</span>
+    ? `<p class="hp-mcab"><span>${ehReferencia(lista) ? 'Lista de referência do pacote (seletor do VS Code)' : `Política de ${esc(lista.escopo || 'escopo não informado')}`}, obtida em ${esc(new Date(lista.obtidoEm).toLocaleDateString('pt-BR'))}${vencida ? ` <span class="hp-pill hp-pill--warn">vencida: ${fmt(idade)} dias</span>` : ''} · uso dos últimos 30 dias</span>
 <span class="hp-chips"><span class="hp-pill hp-pill--ok">${contar((r) => r.libera === true)} liberado(s)</span><span class="hp-pill hp-pill--info">${contar((r) => r.usado)} usado(s)</span><span class="hp-pill hp-pill--${contar((r) => r.alertas.some((a) => a.sev === 'crit')) ? 'crit' : 'off'}">${contar((r) => r.alertas.some((a) => a.sev === 'crit'))} com alerta grave</span></span></p>`
     : '<p class="hp-mcab"><span>Sem lista de política: as colunas de política ficam vazias. <code>node .henriworks/bin/modelos.mjs atualizar --de &lt;fonte&gt;</code></span></p>';
   const tabMod = mods.length ? `<div class="hp-tab"><table><thead><tr><th>Modelo</th><th>Política</th><th class="n">Sessões</th><th class="n">Créditos</th><th>Preço</th><th>Atenção</th></tr></thead><tbody>${mods.map((r) => `<tr><td><code>${esc(r.id)}</code>${r.nome && r.nome !== r.id ? `<br><small class="hp-sub">${esc(r.nome)}</small>` : ''}</td><td><span class="hp-pill hp-pill--${pillEstado(r)}">${esc(estadoTexto(r.estado))}</span></td><td class="n">${fmt(r.sessoes)}</td><td class="n">${fmt(r.creditos, 1)}</td><td>${r.preco ? esc(r.preco) : '<span class="hp-pill hp-pill--warn">sem preço</span>'}</td><td class="hp-al">${r.alertas.map((a) => `<span><span class="hp-pill hp-pill--${sevPill[a.sev]}">${a.sev === 'crit' ? 'grave' : a.sev === 'warn' ? 'atenção' : 'info'}</span> ${esc(a.txt)}</span>`).join('') || '—'}</td></tr>`).join('')}</tbody></table></div>` : '<p class="hp-vazio">nenhum modelo na lista nem no consumo</p>';

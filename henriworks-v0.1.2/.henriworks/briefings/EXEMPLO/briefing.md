@@ -1,7 +1,7 @@
 # Briefing - Segunda confirmação de renegociação gera acordo duplicado
 
 <!--
-Exemplo de saída real do agente hwk-triagem, a partir do chamado INC-4472. Existe para
+Exemplo de saída real do `/hwk-triagem` (agente hwk-discovery), a partir do chamado INC-4472. Existe para
 mostrar três coisas que o molde em branco não mostra: o tamanho certo, a convenção de origem
 e a convenção de lacuna. Não copie o conteúdo.
 -->

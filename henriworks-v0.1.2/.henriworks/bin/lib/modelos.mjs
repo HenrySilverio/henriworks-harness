@@ -18,8 +18,39 @@ export const HISTORICO = join(USO_DIR, 'modelos', 'historico.jsonl');
 
 // ---------------------------------------------------------------- preço e consumo
 
+export const PRECOS_PACOTE = join(AQUI, '..', '..', 'config', 'precos.json');
+export const PRECOS_USUARIO = join(USO_DIR, 'precos.json');
+export const REFERENCIA = join(AQUI, '..', '..', 'config', 'modelos-referencia.json');
+export const FONTE_PACOTE = 'pacote:config/modelos-referencia.json';
+
+function lerTabela(p) {
+  if (!existsSync(p)) return { tabela: null, erro: null };
+  try { return { tabela: JSON.parse(readFileSync(p, 'utf8')), erro: null }; } catch (e) { return { tabela: null, erro: e.message }; }
+}
+
+// Qual tabela vale e o que há de errado nela. A do usuário vence a do pacote; JSON inválido no usuário
+// não derruba o painel: cai para a do pacote, com aviso.
+export function infoPrecos() {
+  const avisos = [];
+  const u = lerTabela(PRECOS_USUARIO);
+  const k = lerTabela(PRECOS_PACOTE);
+  if (u.erro) avisos.push(`${PRECOS_USUARIO} não é JSON válido (${u.erro}): usando a tabela do pacote`);
+  const usuarioValida = u.tabela && Array.isArray(u.tabela.modelos) && u.tabela.modelos.length;
+  if (u.tabela && !usuarioValida) avisos.push(`${PRECOS_USUARIO} sem "modelos": usando a tabela do pacote`);
+  const tabela = usuarioValida ? { semPreco: k.tabela?.semPreco || [], ...u.tabela } : k.tabela || { modelos: [], credito_usd: 0.01 };
+  const origem = usuarioValida ? 'usuario' : k.tabela ? 'pacote' : 'nenhuma';
+  for (const m of tabela.modelos || []) {
+    for (const c of ['entrada', 'saida']) if (!(typeof m[c] === 'number' && m[c] > 0)) avisos.push(`preço de ${m.id || '?'}: "${c}" ausente ou zero (o custo dele sai zerado)`);
+    try { new RegExp(m.padrao, 'i'); } catch { avisos.push(`preço de ${m.id || '?'}: padrão inválido`); }
+  }
+  return { tabela, origem, avisos, pacote: k.tabela, usuario: usuarioValida ? u.tabela : null };
+}
+
 export function precos() {
-  return lerJson(join(USO_DIR, 'precos.json'), null) || lerJson(join(AQUI, '..', '..', 'config', 'precos.json'), { modelos: [], credito_usd: 0.01 });
+  const { tabela } = infoPrecos();
+  // padrão inválido não pode derrubar o painel: fica de fora do casamento
+  tabela.modelos = (tabela.modelos || []).filter((m) => { try { new RegExp(m.padrao, 'i'); return true; } catch { return false; } });
+  return tabela;
 }
 
 export const precoDe = (nome, tabela) => tabela.modelos.find((x) => new RegExp(x.padrao, 'i').test(String(nome || ''))) || null;
@@ -111,6 +142,11 @@ export function acharNaLista(nome, lista) {
 // ---------------------------------------------------------------- cruzamento
 
 export const idadeDias = (lista) => (lista ? (Date.now() - Date.parse(lista.obtidoEm)) / 864e5 : null);
+export const ehReferencia = (lista) => String(lista?.fonte || '').startsWith('pacote:');
+// A referência do pacote é um retrato do seletor, não uma política viva: não vence, só é sinalizada.
+export const vencida = (lista, cfg) => Boolean(lista) && !ehReferencia(lista) && idadeDias(lista) > cfg.modelos.validadeDias;
+// Modelo que está na tabela como "semPreco" é liberado sem preço conhecido, de propósito.
+export const semPrecoDeclarado = (id, tabela) => (tabela?.semPreco || []).some((x) => mesmoModelo(x, id));
 
 // Uma linha por modelo que aparece na lista ou no consumo. Cada linha diz política, uso, preço e
 // o que merece atenção. Severidade: crit (número errado ou política violada), warn, info.
@@ -136,10 +172,10 @@ export function cruzar({ lista, consumo, tabela }) {
     const usado = l.chamadas > 0;
     const lib = ESTADOS[l.estado]?.libera;
     const alertas = [];
-    if (usado && !preco) alertas.push({ sev: 'crit', txt: 'usado sem preço na tabela: o custo dele conta como zero' });
+    if (usado && !preco) alertas.push(semPrecoDeclarado(l.id, tabela) ? { sev: 'warn', txt: 'usado sem preço (a tela não mostra): o custo dele conta como zero' } : { sev: 'crit', txt: 'usado sem preço na tabela: o custo dele conta como zero' });
     if (temLista && usado && lib === false) alertas.push({ sev: 'crit', txt: 'usado, mas bloqueado na política (lista desatualizada ou acesso por time)' });
     if (temLista && usado && !l.naLista) alertas.push({ sev: 'warn', txt: 'usado, mas fora da lista de política' });
-    if (lib === true && !preco) alertas.push({ sev: 'warn', txt: 'liberado sem preço na tabela' });
+    if (lib === true && !preco) alertas.push(semPrecoDeclarado(l.id, tabela) ? { sev: 'info', txt: 'liberado sem preço: a tela não mostra preço para ele' } : { sev: 'warn', txt: 'liberado sem preço na tabela' });
     if (lib === true && !usado) alertas.push({ sev: 'info', txt: 'liberado, sem uso no período' });
     return { ...l, sessoes: l.sessoes.size, nomesUsados: [...l.nomesUsados], preco: preco ? preco.id : null, usado, libera: lib, alertas };
   });

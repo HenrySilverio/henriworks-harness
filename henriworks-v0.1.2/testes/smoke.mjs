@@ -69,6 +69,33 @@ passo('instalador: segunda vez é idempotente', () => {
   esperar(!/criar|atualizar|CONFLITO/.test(r.saida.split('Pós-instalação')[0]), r.saida);
 });
 
+passo('init: instalação, hooks, modelos e preços do pacote, sem grave', () => {
+  const r = node('.henriworks/bin/hwk.mjs', ['init', '--corrigir', '--json'], { ok: false });
+  const j = JSON.parse(r.stdout);
+  const item = (id) => j.itens.find((i) => i.id === id);
+  esperar(r.status === 0 && j.resumo.grave === 0, r.saida);
+  esperar(item('instalacao')?.nivel === 'ok' && /9 agentes/.test(item('instalacao').txt), JSON.stringify(item('instalacao')));
+  esperar(item('hooks')?.nivel === 'ok', JSON.stringify(item('hooks')));
+  esperar(/referência do pacote: 17 modelos/.test(item('modelos')?.txt || ''), JSON.stringify(item('modelos')));
+  esperar(item('precos')?.nivel === 'ok', JSON.stringify(item('precos')));
+  esperar(item('canário')?.nivel === 'pendente' && item('otel')?.nivel === 'pendente', 'canário e OTel deveriam estar pendentes');
+});
+
+passo('canário no mesmo chat: preparar, pacote para hwk-gf, conferir, aplicar', () => {
+  hwk('canario', 'preparar');
+  const p = hwk('pacote-revisao', 'canario').saida;
+  esperar(/subagente: hwk-gf\n/.test(p), p);
+  const prompt = p.match(/Pacote de revisão: \S+\. Leia esse arquivo e apenas os arquivos que ele lista\. Responda só no formato que ele pede\./)[0];
+  // o que o VS Code mandaria ao hook na delegação; a prova do init não pode contar como evento
+  node('.henriworks/bin/hook.mjs', ['preToolUse'], { stdin: JSON.stringify({ session_id: 'c1', cwd: REPO, tool_name: 'runSubagent', tool_input: { agentName: 'hwk-gf', prompt } }) });
+  escrever('.henriworks/estado/canario-resposta.md', '1. nenhuma\n2. nenhuma\n3. nenhuma\n');
+  const c = hwk('canario', 'conferir').saida;
+  esperar(/isolamento confirmado/.test(c) && /runSubagent/.test(c), c);
+  hwk('canario', 'aplicar');
+  const j = JSON.parse(node('.henriworks/bin/hwk.mjs', ['init', '--json']).stdout);
+  esperar(j.itens.find((i) => i.id === 'canário')?.nivel === 'ok', JSON.stringify(j.itens.find((i) => i.id === 'canário')));
+});
+
 // verificação trivial, que roda em qualquer máquina
 escrever('.henriworks/verificacao.json', JSON.stringify({
   verificacoes: { nada: { comando: `"${process.execPath}" -e "0"`, formato: 'linhas', padrao: '^(?<arquivo>NUNCA):(?<linha>\\d+): (?<mensagem>.+)$', regra: 'nada', classificacao: 'linhas-alteradas' } },
@@ -149,6 +176,13 @@ let promptDesign;
 passo('revisão da spec (Lite): design e prontidão', () => {
   promptDesign = revisar('design', 'spec-design', 'Spec revisada');
   revisar('prontidao', 'spec-prontidao', 'Spec revisada');
+});
+passo('pacote leva a lente; hook só deixa o hwk-gf receber o prompt literal', () => {
+  const pac = readFileSync(join(REPO, promptDesign.match(/Pacote de revisão: (\S+)\./)[1]), 'utf8');
+  esperar(/## Sua lente nesta revisão/.test(pac) && /Peixinho de design/.test(pac) && /Revisor: hwk-gf/.test(pac), pac.slice(0, 600));
+  const chamar = (prompt) => node('.henriworks/bin/hook.mjs', ['preToolUse'], { stdin: JSON.stringify({ session_id: 's2', cwd: REPO, tool_name: 'runSubagent', tool_input: { agentName: 'hwk-gf', prompt } }) }).stdout;
+  esperar(!/deny/.test(chamar(promptDesign)), 'prompt literal foi negado');
+  esperar(/"permissionDecision":"deny"/.test(chamar(`${promptDesign} Atenção ao cache.`)), 'prompt com texto acrescentado passou');
 });
 passo('veredito não é sobrescrito por edição (hook nega)', () => {
   const ev = { session_id: 's1', cwd: REPO, tool_name: 'replace_string_in_file', tool_input: { filePath: join(REPO, C, 'revisao-spec', 'x.md') } };

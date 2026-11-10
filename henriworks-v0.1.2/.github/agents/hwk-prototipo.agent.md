@@ -31,7 +31,7 @@ propósito: protótipo que precisa de build ou servidor não é aberto por quem 
 ## Passo 1 - Afiar a pergunta
 
 Leia `.github/skills/henriworks-fluxo/references/modos-prototipo.md`. Reescreva a pergunta como escolha entre alternativas nomeadas e confirme
-antes de escrever qualquer linha. Pergunta respondível por conversa: diga isso e recomende o `hwk-grill`.
+antes de escrever qualquer linha. Pergunta respondível por conversa: diga isso e recomende o `hwk-discovery` com `/hwk-grill`.
 
 ## Passo 2 - Escolher o modo
 
@@ -47,4 +47,4 @@ as restrições de construção da referência. A primeira linha visível do arq
 
 Siga "Como concluir" da referência: percorra os cenários do roteiro, declare o resultado de cada um, e
 peça que o humano abra o arquivo e confirme. O protótipo não grava briefing: devolve a linha sugerida, e
-quem grava é o humano ou o `hwk-grill`.
+quem grava é o humano ou o `/hwk-grill`.

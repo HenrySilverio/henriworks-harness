@@ -79,7 +79,7 @@ decidir, e aí não decide nada.
 | a resposta | **sugerida** ao humano como linha para `Contexto útil` do briefing, não gravada |
 
 Este comando não escreve briefing. Ele devolve a linha pronta, e quem grava é o humano ou uma
-nova rodada de `hwk-grill`. A regra de rastro do `SKILL.md` permite que essa linha
+nova rodada de `/hwk-grill`. A regra de rastro do `SKILL.md` permite que essa linha
 entre depois, desde que cite a pergunta e a alternativa escolhida.
 
 A separação existe porque a conclusão do protótipo é do modelo, não do humano. Ela precisa

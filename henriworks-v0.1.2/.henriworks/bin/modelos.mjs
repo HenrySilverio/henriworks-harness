@@ -11,6 +11,8 @@
 //   api:org/<org> | api:enterprise/<ent>     a API de política direto (precisa de permissão de admin)
 //   https://...                               URL; tenta fetch e depois curl (proxy por HTTPS_PROXY)
 //   <caminho>                                 arquivo local ou de rede
+// Sem fonte configurada, usa a lista de referência que vem no pacote (config/modelos-referencia.json):
+// os modelos do seletor do VS Code na data do pacote. Ela não vence; só avisa que não é a política viva.
 // O desenho recomendado: um job agendado com credencial de admin roda "gerar" e publica o JSON
 // num repositório interno; cada dev só lê esse JSON com "gh:". Ninguém do time precisa de token admin.
 //
@@ -23,7 +25,7 @@ import { homedir } from 'node:os';
 import { config, gravarJson, anexarJsonl, sair } from './lib/comum.mjs';
 import {
   LIBERADOS, HISTORICO, precos, custo, lerTodos, normalizar, lerLiberados, diferenca, cruzar, estadoTexto,
-  idadeDias, modelosDosAgentes, acharNaLista, ESTADOS,
+  idadeDias, modelosDosAgentes, acharNaLista, ESTADOS, REFERENCIA, FONTE_PACOTE, ehReferencia, vencida, infoPrecos,
 } from './lib/modelos.mjs';
 
 const RAIZ = process.cwd();
@@ -43,14 +45,22 @@ function opcoes(argv) {
   return { pos, op };
 }
 
+// Rotas sem "/" no começo: o Git Bash (MSYS) converte "/orgs/..." em "C:/Program Files/Git/orgs/...".
 function gh(args) {
-  const r = spawnSync('gh', args, { encoding: 'utf8', maxBuffer: 1 << 24 });
+  const r = spawnSync('gh', args, { encoding: 'utf8', maxBuffer: 1 << 24, env: { ...process.env, MSYS_NO_PATHCONV: '1' } });
   if (r.error?.code === 'ENOENT') throw new Error('GitHub CLI (gh) não encontrado no PATH');
-  if (r.status !== 0) throw new Error(`gh ${args.slice(0, 2).join(' ')} falhou: ${(r.stderr || r.stdout || '').trim().split('\n')[0]}`);
+  if (r.status !== 0) {
+    const msg = (r.stderr || r.stdout || '').trim();
+    if (/HTTP 403|Must have admin|Resource not accessible/i.test(msg) && /model-policies/.test(args.join(' '))) {
+      throw new Error('a API de política de modelos exige owner da org (ou o papel read_enterprise_ai_controls na enterprise), e o seu token não tem. Não crie token com admin:org na sua máquina: siga com a lista de referência do pacote, ou leia o JSON que o job do time de plataforma publica (--de gh:<org>/<repo>/modelos-liberados.json)');
+    }
+    if (/HTTP 404/.test(msg)) throw new Error(`gh: não encontrado (404). Confira org, repositório e caminho. ${msg.split('\n')[0]}`);
+    throw new Error(`gh ${args.slice(0, 2).join(' ')} falhou: ${msg.split('\n')[0]}`);
+  }
   return r.stdout;
 }
 
-const apiPolitica = (escopo, nome) => gh(['api', '-H', `X-GitHub-Api-Version: ${API_VERSAO}`, `/${escopo === 'org' ? 'orgs' : 'enterprises'}/${nome}/copilot/model-policies`]);
+const apiPolitica = (escopo, nome) => gh(['api', '-H', `X-GitHub-Api-Version: ${API_VERSAO}`, `${escopo === 'org' ? 'orgs' : 'enterprises'}/${nome}/copilot/model-policies`]);
 
 async function baixar(url) {
   try {
@@ -70,7 +80,7 @@ async function lerFonte(fonte) {
     const m = fonte.slice(3).match(/^([^/]+)\/([^/]+)\/(.+?)(?:@(.+))?$/);
     if (!m) throw new Error('formato: gh:<dono>/<repo>/<caminho>.json[@ref]');
     const [, dono, repo, caminho, ref] = m;
-    return JSON.parse(gh(['api', '-H', 'Accept: application/vnd.github.raw', `/repos/${dono}/${repo}/contents/${caminho}${ref ? `?ref=${encodeURIComponent(ref)}` : ''}`]));
+    return JSON.parse(gh(['api', '-H', 'Accept: application/vnd.github.raw', `repos/${dono}/${repo}/contents/${caminho}${ref ? `?ref=${encodeURIComponent(ref)}` : ''}`]));
   }
   if (/^api:/.test(fonte)) {
     const m = fonte.slice(4).match(/^(org|enterprise)\/(.+)$/);
@@ -94,24 +104,20 @@ function consumoComCusto(dias) {
 const fmt = (n, d = 0) => Number(n || 0).toLocaleString('pt-BR', { maximumFractionDigits: d, minimumFractionDigits: d });
 
 function cabecalhoLista(lista, cfg) {
-  if (!lista) return 'lista de política: nenhuma. Rode: node .henriworks/bin/modelos.mjs atualizar --de <fonte>';
+  if (!lista) return 'lista de política: nenhuma. Rode: node .henriworks/bin/modelos.mjs atualizar';
   const idade = idadeDias(lista);
-  const vencida = idade > cfg.modelos.validadeDias;
-  return `lista de política: ${lista.modelos.length} modelo(s), ${lista.escopo || 'escopo não informado'}, obtida em ${new Date(lista.obtidoEm).toLocaleString('pt-BR')} (${fmt(idade, 1)} dia(s))${vencida ? ` · VENCIDA: mais de ${cfg.modelos.validadeDias} dia(s), atualize` : ''}`;
+  if (ehReferencia(lista)) return `lista: referência do pacote, ${lista.modelos.length} modelo(s) do seletor em ${new Date(lista.obtidoEm).toLocaleDateString('pt-BR')}. Para a política viva do time, configure "modelos.fonte" (README, Modelos e preços)`;
+  return `lista de política: ${lista.modelos.length} modelo(s), ${lista.escopo || 'escopo não informado'}, obtida em ${new Date(lista.obtidoEm).toLocaleString('pt-BR')} (${fmt(idade, 1)} dia(s))${vencida(lista, cfg) ? ` · VENCIDA: mais de ${cfg.modelos.validadeDias} dia(s), atualize` : ''}`;
 }
 
 // ---------------------------------------------------------------- comandos
 
 async function cmdAtualizar(op) {
   const cfg = config(RAIZ);
-  const fonte = op.de || process.env.HENRIWORKS_MODELOS_FONTE || cfg.modelos.fonte;
-  if (!fonte) {
-    if (op.silencioso) return;
-    sair(2, 'sem fonte. Use --de <fonte>, a variável HENRIWORKS_MODELOS_FONTE ou "modelos": { "fonte": "..." } em .henriworks/henriworks.json.');
-  }
+  const fonte = op.de || process.env.HENRIWORKS_MODELOS_FONTE || cfg.modelos.fonte || FONTE_PACOTE;
   let nova;
   try {
-    nova = normalizar(await lerFonte(fonte), fonte);
+    nova = normalizar(fonte === FONTE_PACOTE ? JSON.parse(readFileSync(REFERENCIA, 'utf8')) : await lerFonte(fonte), fonte);
   } catch (e) {
     if (op.silencioso) { console.log(`modelos: não atualizei (${e.message}); sigo com a lista guardada`); return; }
     sair(1, `modelos: ${e.message}. A lista guardada não mudou.`);
@@ -121,7 +127,7 @@ async function cmdAtualizar(op) {
   gravarJson(LIBERADOS, nova);
   if (mud.length) anexarJsonl(HISTORICO, { t: new Date().toISOString(), fonte, mudancas: mud });
   const lib = nova.modelos.filter((m) => ESTADOS[m.estado]?.libera === true).length;
-  console.log(`modelos: ${nova.modelos.length} na política, ${lib} liberado(s)${antes ? `; ${mud.length ? `${mud.length} mudança(s) desde a última lista` : 'sem mudança'}` : ' (primeira lista)'}`);
+  console.log(`modelos: ${nova.modelos.length} ${fonte === FONTE_PACOTE ? 'na referência do pacote' : 'na política'}, ${lib} liberado(s)${antes ? `; ${mud.length ? `${mud.length} mudança(s) desde a última lista` : 'sem mudança'}` : ' (primeira lista)'}`);
   if (antes && !op.silencioso) for (const m of mud) console.log(`  ${m.id}: ${estadoTexto(m.de)} -> ${estadoTexto(m.para)}`);
 }
 
@@ -133,7 +139,10 @@ function cmdListar(op) {
   const linhas = cruzar({ lista, consumo, tabela });
   if (op.json) { console.log(JSON.stringify({ lista: lista ? { escopo: lista.escopo, obtidoEm: lista.obtidoEm, fonte: lista.fonte } : null, dias, modelos: linhas }, null, 2)); return linhas; }
   console.log(cabecalhoLista(lista, cfg));
-  console.log(`uso: últimos ${dias} dia(s) · preço: tabela de ${tabela.consultado_em || '?'}\n`);
+  const ip = infoPrecos();
+  console.log(`uso: últimos ${dias} dia(s) · preço: tabela ${ip.origem === 'usuario' ? 'sua (~/.henriworks/uso/precos.json)' : 'do pacote'}, de ${tabela.consultado_em || '?'}`);
+  for (const a of ip.avisos) console.log(`aviso ${a}`);
+  console.log('');
   if (!linhas.length) { console.log('nenhum modelo na lista nem no consumo.'); return linhas; }
   const w = Math.min(Math.max(...linhas.map((l) => l.id.length), 6), 34);
   console.log(`${'modelo'.padEnd(w)}  ${'política'.padEnd(22)}  ${'sessões'.padStart(7)}  ${'créditos'.padStart(9)}  preço`);
@@ -150,7 +159,8 @@ function cmdConferir(op) {
   const { tabela, consumo } = consumoComCusto(Number(op.dias) || 30);
   const graves = [];
   for (const l of cruzar({ lista, consumo, tabela })) for (const a of l.alertas) if (a.sev === 'crit') graves.push(`${l.id}: ${a.txt}`);
-  if (lista && idadeDias(lista) > cfg.modelos.validadeDias) graves.push(`a lista tem ${fmt(idadeDias(lista), 0)} dia(s): atualize com "modelos atualizar"`);
+  for (const a of infoPrecos().avisos) console.log(`aviso ${a}`);
+  if (vencida(lista, cfg)) graves.push(`a lista tem ${fmt(idadeDias(lista), 0)} dia(s): atualize com "modelos atualizar"`);
   // model: de agentes do repositório e do usuário precisa apontar para modelo liberado.
   const dirs = [join(RAIZ, '.github', 'agents'), join(process.env.COPILOT_HOME || join(homedir(), '.copilot'), 'agents')];
   for (const a of modelosDosAgentes(dirs)) {

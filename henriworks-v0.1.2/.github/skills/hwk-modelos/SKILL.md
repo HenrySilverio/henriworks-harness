@@ -9,7 +9,8 @@ disable-model-invocation: true
 Utilitário: roda em qualquer agente com terminal.
 
 - Sem argumento: rode `node .henriworks/bin/modelos.mjs` e mostre a saída inteira.
-- `atualizar`: rode `node .henriworks/bin/modelos.mjs atualizar` com o resto do argumento, sem alterar.
+- `atualizar`: rode `node .henriworks/bin/modelos.mjs atualizar` com o resto do argumento, sem alterar. Sem
+  fonte configurada, ele carrega a lista de referência que vem no pacote.
 - `conferir`: rode `node .henriworks/bin/modelos.mjs conferir`. Código 1 é alerta grave: mostre e pare.
 
 Não interprete além da saída. Política, uso e preço vêm de script; não sugira trocar de modelo por conta própria.

@@ -1,6 +1,6 @@
 # Padrões de código auditáveis
 
-Fonte declarada do **eixo de padrões** do `hwk-review` (peixinho de padrões). Este arquivo é opcional: sem ele, a
+Fonte declarada do **eixo de padrões** do `hwk-review` (lente de padrões do peixinho). Este arquivo é opcional: sem ele, a
 revisão cai nas instructions do projeto e depois no baseline da referência.
 
 Ele existe porque `copilot-instructions.md` é escrito para **gerar** código e é injetado em

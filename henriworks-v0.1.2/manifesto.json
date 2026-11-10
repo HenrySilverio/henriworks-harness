@@ -15,7 +15,7 @@
     "args": [
       "pos-instalacao"
     ],
-    "titulo": "Pós-instalação (mapa, hooks do Git, canário, OTel)",
+    "titulo": "Pós-instalação (mapa, hooks do Git, modelos, OTel)",
     "seFalhar": "a pós-instalação falhou: rode node .henriworks/bin/hwk.mjs pos-instalacao e veja a saída inteira."
   },
   "excluir": [
@@ -66,6 +66,10 @@
       "tipo": "gerenciado"
     },
     {
+      "origem": ".henriworks/config/modelos-referencia.json",
+      "tipo": "gerenciado"
+    },
+    {
       "origem": "README.md",
       "tipo": "gerenciado",
       "destino": ".henriworks/docs/README.md"
@@ -112,6 +116,16 @@
       "tipo": "semente"
     }
   ],
-  "removidos": [],
+  "removidos": [
+    ".github/agents/hwk-grill.agent.md",
+    ".github/agents/hwk-triagem.agent.md",
+    ".github/agents/hwk-gf-zoom-out.agent.md",
+    ".github/agents/hwk-gf-compreensao.agent.md",
+    ".github/agents/hwk-gf-design.agent.md",
+    ".github/agents/hwk-gf-prontidao.agent.md",
+    ".github/agents/hwk-gf-spec.agent.md",
+    ".github/agents/hwk-gf-padroes.agent.md",
+    ".github/agents/hwk-gf-plantao.agent.md"
+  ],
   "conhecidos": {}
 }

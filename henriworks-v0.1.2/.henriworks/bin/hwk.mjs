@@ -23,6 +23,7 @@
 //   estrito <id> <alvo>                   revisor em processo separado do Copilot CLI (experimental)
 //   uso ...                               uso e custo (ver uso.mjs)
 //   modelos [atualizar|conferir|gerar]    modelos liberados × usados × preço (ver modelos.mjs)
+//   init [--corrigir] [--json]            confere a instalação e corrige o que é seguro (/hwk-init)
 //   pos-instalacao                        roda depois do instalador
 
 import { spawnSync } from 'node:child_process';
@@ -38,6 +39,7 @@ import {
   promptDoPacote, tocasSobrepoem,
 } from './lib/comum.mjs';
 import { validarMudanca, imprimir } from './lib/validar.mjs';
+import { PERSONAS } from './lib/personas.mjs';
 
 const BIN = dirname(fileURLToPath(import.meta.url));
 const RAIZ = process.cwd();
@@ -303,10 +305,9 @@ function cmdHash({ pos }) {
 // --------------------------------------------------------------- revisão
 
 const PACOTES_REG = join(RAIZ, ESTADO, 'pacotes.jsonl');
-const PERSONA = {
-  'zoom-out': 'hwk-gf-zoom-out', 'zoom-out-2': 'hwk-gf-zoom-out', compreensao: 'hwk-gf-compreensao', design: 'hwk-gf-design',
-  prontidao: 'hwk-gf-prontidao', spec: 'hwk-gf-spec', padroes: 'hwk-gf-padroes', plantao: 'hwk-gf-plantao', canario: 'hwk-gf-compreensao',
-};
+// Um só revisor sem contexto. A lente (persona) de cada estágio ou eixo vai dentro do pacote.
+const REVISOR = 'hwk-gf';
+const demover = (t) => t.replace(/^(#+) /gm, '##$1 ');
 
 
 function instructionsQueCasam(arquivos) {
@@ -344,7 +345,7 @@ function cmdPacoteRevisao({ pos, op }) {
   let [id, alvo] = pos;
   if (id === 'canario' && !alvo) alvo = 'canario';
   const dir = alvo === 'canario' ? join(RAIZ, ESTADO) : dirMudanca(id, RAIZ);
-  if (!PERSONA[alvo]) sair(2, `alvo "${alvo}" inválido. Spec: ${ESTAGIOS_SPEC.join(', ')}. Código: ${EIXOS_CODIGO.join(', ')}.`);
+  if (!PERSONAS[alvo]) sair(2, `alvo "${alvo}" inválido. Spec: ${ESTAGIOS_SPEC.join(', ')}. Código: ${EIXOS_CODIGO.join(', ')}.`);
   const m = alvo === 'canario' ? {} : metadados(dir);
   const rel = (p) => barra(relative(RAIZ, p));
   const pasta = join(dir, 'pacotes');
@@ -377,7 +378,7 @@ function cmdPacoteRevisao({ pos, op }) {
       const v = vereditoVigente(join(dir, 'revisao-spec'), 'zoom-out', chave) || null;
       if (v) leitura.push(`- \`${rel(v.arquivo)}\`: relatório do zoom-out inicial, para conferir o que mudou`);
     }
-    pedido = `Estágio "${alvo}" da revisão da spec da mudança ${id} (rigor ${m.rigor || '?'}), conforme a sua persona.`;
+    pedido = `Estágio "${alvo}" da revisão da spec da mudança ${id} (rigor ${m.rigor || '?'}), conforme a sua lente.`;
   } else {
     const head = headCurto(RAIZ);
     chave = head;
@@ -415,7 +416,7 @@ function cmdPacoteRevisao({ pos, op }) {
       leitura.push(`- \`${rel(pAff)}\`: raio de impacto pelo mapa: chamadores e dependentes dos arquivos alterados`);
       add('README.md', 'carga esperada e contexto de execução, se declarados');
     }
-    pedido = `Eixo "${alvo}" da revisão de código da mudança ${id}, no commit ${head}, conforme a sua persona.`;
+    pedido = `Eixo "${alvo}" da revisão de código da mudança ${id}, no commit ${head}, conforme a sua lente.`;
   }
   if (alvo !== 'canario') {
     const ref = refEixos();
@@ -426,8 +427,9 @@ function cmdPacoteRevisao({ pos, op }) {
   const corpo = [
     `# Pacote de revisão · ${alvo}`,
     '',
-    `Gerado por script em ${new Date().toISOString()}. Persona: ${PERSONA[alvo]}.`,
+    `Gerado por script em ${new Date().toISOString()}. Revisor: ${REVISOR}. Lente: ${alvo}.`,
     '',
+    ...(PERSONAS[alvo].texto ? ['## Sua lente nesta revisão', '', demover(PERSONAS[alvo].texto), ''] : []),
     '## Pedido',
     '',
     pedido,
@@ -457,7 +459,7 @@ function cmdPacoteRevisao({ pos, op }) {
   const p = rel(caminho);
   anexarJsonl(PACOTES_REG, { t: new Date().toISOString(), change: id, alvo, chave, arquivo: p, hash: sha(readFileSync(caminho, 'utf8')), prompt: sha(promptDoPacote(p)), locais });
   console.log(`pacote: ${p}`);
-  console.log(`subagente: ${PERSONA[alvo]}`);
+  console.log(`subagente: ${REVISOR}`);
   console.log(`prompt literal (copie exatamente, sem acrescentar nada):\n${promptDoPacote(p)}`);
 }
 
@@ -709,11 +711,12 @@ function cmdCanario({ pos }) {
     console.log([
       `Canário preparado. Palavra-código: ${token}`,
       '',
-      '1. Recarregue o VS Code (os hooks são lidos ao abrir a janela).',
-      '2. Abra um chat NOVO, harness Copilot, agente hwk-review.',
-      `3. Envie exatamente:  canario ${token}`,
-      '   A palavra-código entra só no chat do pai. O agente gera o pacote, delega ao peixinho e grava a resposta.',
-      '4. Depois:  node .henriworks/bin/hwk.mjs canario conferir',
+      'A palavra-código agora está na conversa deste chat (a isca). Neste mesmo chat, no agente hwk:',
+      '1. node .henriworks/bin/hwk.mjs pacote-revisao canario',
+      '2. Delegue ao subagente hwk-gf com o prompt literal impresso, sem acrescentar nada.',
+      '3. Grave a resposta dele, sem edição, em .henriworks/estado/canario-resposta.md',
+      '4. node .henriworks/bin/hwk.mjs canario conferir',
+      'O /hwk-init e o /hwk-canario fazem os quatro passos. Hooks só rodam se a janela do VS Code foi aberta depois da instalação.',
     ].join('\n'));
     return;
   }
@@ -746,7 +749,7 @@ function cmdCanario({ pos }) {
     const cfg = lerJson(p, {});
     cfg.revisaoIsolada = { ...(cfg.revisaoIsolada || {}), conferirPacote: 'negar', ferramenta: can.subagente.ferramenta, campoPrompt: can.subagente.campoPrompt };
     gravarJson(p, cfg);
-    console.log(`conferência do pacote ligada: chamada de subagente "${can.subagente.ferramenta}" para hwk-gf-* só passa com o prompt literal do pacote.`);
+    console.log(`conferência do pacote ligada: chamada de subagente "${can.subagente.ferramenta}" para hwk-gf só passa com o prompt literal do pacote.`);
     return;
   }
   sair(2, 'uso: hwk canario preparar | conferir | aplicar');
@@ -762,7 +765,7 @@ function cmdEstrito({ pos }) {
   if (!reg) sair(2, `gere antes: hwk pacote-revisao ${id} ${alvo}`);
   const tem = spawnSync(process.platform === 'win32' ? 'where' : 'which', ['copilot'], { encoding: 'utf8' });
   if (tem.status !== 0) sair(1, 'modo estrito exige o Copilot CLI (copilot) no PATH. A revisão para aqui: não cai para o modo padrão em silêncio.');
-  const args = ['-p', promptDoPacote(reg.arquivo), '--agent', PERSONA[alvo], '--no-custom-instructions', '--deny-tool=write', '--deny-tool=shell', '-s'];
+  const args = ['-p', promptDoPacote(reg.arquivo), '--agent', REVISOR, '--no-custom-instructions', '--deny-tool=write', '--deny-tool=shell', '-s'];
   console.log(`executando: copilot ${args.map((a) => (/\s/.test(a) ? `"${a}"` : a)).join(' ')}`);
   const r = spawnSync('copilot', args, { cwd: RAIZ, encoding: 'utf8', maxBuffer: 1 << 26, timeout: 15 * 60 * 1000 });
   if (r.status !== 0) sair(1, `copilot saiu com ${r.status}: ${(r.stderr || '').trim().slice(0, 600)}`);
@@ -770,6 +773,166 @@ function cmdEstrito({ pos }) {
   mkdirSync(dirname(out), { recursive: true });
   writeFileSync(out, r.stdout.trim() + '\n');
   console.log(`resposta do revisor: ${barra(relative(RAIZ, out))}\nconfira e grave: hwk gravar-veredito ${id} ${alvo} --de ${barra(relative(RAIZ, out))}`);
+}
+
+// -------------------------------------------------------------------- init
+
+// O que o /hwk-init confere. Agentes e skills que a versão atual instala; os antigos, para avisar.
+const AGENTES = ['hwk', 'hwk-discovery', 'hwk-prototipo', 'hwk-plan', 'hwk-review', 'hwk-implement', 'hwk-implementador', 'hwk-archive', 'hwk-gf'];
+const SKILLS = ['hwk-start', 'hwk-init', 'hwk-grill', 'hwk-triagem', 'hwk-canario', 'hwk-prototipo', 'hwk-plan', 'hwk-review', 'hwk-implement', 'hwk-archive', 'hwk-fechar', 'hwk-ticket', 'hwk-adotar', 'hwk-mapa', 'hwk-uso', 'hwk-modelos', 'henriworks-fluxo'];
+const AGENTES_ANTIGOS = ['hwk-grill', 'hwk-triagem', 'hwk-gf-zoom-out', 'hwk-gf-compreensao', 'hwk-gf-design', 'hwk-gf-prontidao', 'hwk-gf-spec', 'hwk-gf-padroes', 'hwk-gf-plantao'];
+const EVENTOS_HOOK = ['sessionStart', 'preToolUse', 'postToolUse', 'subagentStart', 'sessionEnd'];
+
+async function cmdInit({ op }) {
+  exigirRaiz();
+  const { USO_DIR } = await import('./lib/comum.mjs');
+  const M = await import('./lib/modelos.mjs');
+  const itens = [];
+  const add = (id, nivel, txt, extra = {}) => itens.push({ id, nivel, txt, ...extra });
+  const corrigir = Boolean(op.corrigir);
+  const rodar = (script, args, env = {}) => spawnSync(process.execPath, [join(BIN, script), ...args], { cwd: RAIZ, encoding: 'utf8', env: { ...process.env, ...env }, timeout: 4 * 60 * 1000 });
+  const cfgDir = (n) => join(process.env.COPILOT_HOME || join(homedir(), '.copilot'), n);
+  const lock = lerJson(join(RAIZ, HW, 'henriworks.lock.json'));
+
+  // 1. Node e Git
+  const nodeMaior = Number(process.versions.node.split('.')[0]);
+  add('node', nodeMaior >= 20 ? 'ok' : 'grave', `Node ${process.versions.node}${nodeMaior >= 20 ? '' : ': o HenriWorks precisa de 20 ou mais'}`);
+  const temGit = git(['rev-parse', '--show-toplevel'], { cwd: RAIZ, permitirFalha: true }) !== null;
+  add('git', temGit ? 'ok' : 'aviso', temGit ? `branch ${branchAtual(RAIZ) || '?'}` : 'sem Git: revisão de código e mapa incremental não funcionam');
+
+  // 2. Instalação: agentes, skills e contrato, no repositório ou no usuário (instalação global)
+  const ondeAgente = (n) => [join(RAIZ, '.github', 'agents'), cfgDir('agents')].find((d) => existsSync(join(d, `${n}.agent.md`)));
+  const ondeSkill = (n) => [join(RAIZ, '.github', 'skills'), cfgDir('skills')].find((d) => existsSync(join(d, n, 'SKILL.md')));
+  const faltaAg = AGENTES.filter((n) => !ondeAgente(n));
+  const faltaSk = SKILLS.filter((n) => !ondeSkill(n));
+  const antigos = AGENTES_ANTIGOS.filter((n) => ondeAgente(n));
+  if (faltaAg.length || faltaSk.length) add('instalacao', 'grave', `faltam ${[...faltaAg.map((n) => `agente ${n}`), ...faltaSk.map((n) => `skill ${n}`)].slice(0, 6).join(', ')}. Rode o instalador de novo.`);
+  else add('instalacao', 'ok', `${lock ? `versão ${lock.versao}` : 'sem lock no repositório (instalação global?)'}, ${AGENTES.length} agentes, ${SKILLS.length - 1} comandos e o contrato`);
+  if (antigos.length) add('agentes-antigos', 'aviso', `agentes da organização anterior ainda instalados (${antigos.join(', ')}). Rode o instalador de novo: ele remove os que você não alterou.`);
+
+  // 3. Hooks: arquivo e uma prova de que o script responde (com dados de uso numa pasta temporária)
+  const pHooks = join(RAIZ, '.github', 'hooks', 'henriworks.json');
+  const hooks = lerJson(pHooks);
+  const faltaEv = EVENTOS_HOOK.filter((e) => !hooks?.hooks?.[e]);
+  if (!hooks) add('hooks', 'grave', '.github/hooks/henriworks.json ausente ou inválido: sem guarda, sem coleta de uso. Rode o instalador de novo.');
+  else if (faltaEv.length) add('hooks', 'grave', `.github/hooks/henriworks.json sem ${faltaEv.join(', ')}`);
+  else {
+    const tmpUso = join(RAIZ, ESTADO, 'init-uso-teste');
+    const prova = (ev, payload) => {
+      const r = spawnSync(process.execPath, [join(BIN, 'hook.mjs'), ev], { cwd: RAIZ, input: JSON.stringify({ cwd: RAIZ, session_id: 'hwk-init', ...payload }), encoding: 'utf8', env: { ...process.env, HENRIWORKS_USO: tmpUso, HENRIWORKS_HOOK_TESTE: '1' }, timeout: 10000 });
+      try { return JSON.parse(r.stdout || '{}'); } catch { return null; }
+    };
+    const leitura = prova('preToolUse', { tool_name: 'read_file', tool_input: { filePath: 'README.md' } });
+    const guarda = prova('preToolUse', { tool_name: 'edit_file', tool_input: { filePath: `${HW}/changes/init-teste/revisao/spec-x.md` } });
+    rmSync(tmpUso, { recursive: true, force: true });
+    const ok = leitura && !leitura.permissionDecision && guarda?.permissionDecision === 'deny';
+    add('hooks', ok ? 'ok' : 'grave', ok ? `5 eventos declarados; o script responde e a guarda de veredito nega. Se o VS Code roda os hooks, quem prova é o canário` : 'o hook.mjs não respondeu como esperado: confira o Node no PATH do VS Code');
+  }
+
+  // 4. Git: nada do harness versionado nem aparecendo como não rastreado
+  if (temGit) {
+    const caminhos = [`${HW}/henriworks.json`, '.github/agents/hwk.agent.md', '.github/skills/hwk-init/SKILL.md', '.github/hooks/henriworks.json'].filter((c) => existsSync(join(RAIZ, c)));
+    const versionados = caminhos.filter((c) => git(['ls-files', '--error-unmatch', c], { cwd: RAIZ, permitirFalha: true }) !== null);
+    const visiveis = caminhos.filter((c) => !versionados.includes(c) && git(['check-ignore', '-q', c], { cwd: RAIZ, permitirFalha: true }) === null);
+    if (versionados.length) add('git-exclude', 'grave', `arquivo do harness versionado: ${versionados.join(', ')}. Ele vai para a PR. Tire do índice (git rm --cached) e rode o instalador de novo.`);
+    else if (visiveis.length) add('git-exclude', 'pendente', `${visiveis.join(', ')} aparece(m) no git status: falta a exclusão em .git/info/exclude. Rode o instalador de novo.`);
+    else add('git-exclude', 'ok', 'harness fora do Git (.git/info/exclude)');
+  }
+
+  // 5. Bloco de instruções (AGENTS.md ou copilot-instructions.md)
+  const comBloco = ['AGENTS.md', '.github/copilot-instructions.md'].find((f) => (ler(join(RAIZ, f)) || '').includes('<!-- henriworks:inicio -->'));
+  add('instrucoes', comBloco ? 'ok' : 'aviso', comBloco ? `bloco em ${comBloco}` : 'sem o bloco no AGENTS.md: o agente padrão não sugere o HenriWorks nem o mapa (instalado com --sem-instrucoes?)');
+
+  // 6. Mapa e hooks do Git que o mantêm
+  const temMapa = () => existsSync(join(RAIZ, HW, 'mapa', 'graph.json')) || existsSync(join(RAIZ, 'graphify-out', 'graph.json'));
+  if (!temMapa() && corrigir) {
+    const r = rodar('henrimap.mjs', ['build']);
+    add('mapa', temMapa() ? 'corrigido' : 'pendente', temMapa() ? `construído: ${(r.stdout || '').trim().split('\n').find((l) => /nós/.test(l)) || 'ok'}` : `build falhou: ${(r.stderr || r.stdout || '').trim().split('\n').pop()}`);
+  } else if (temMapa()) {
+    const st = rodar('henrimap.mjs', ['status']);
+    add('mapa', 'ok', (st.stdout || '').trim().split('\n').find((l) => /nós/.test(l)) || 'construído');
+  } else add('mapa', 'pendente', 'sem mapa: node .henriworks/bin/henrimap.mjs build (o init --corrigir faz)');
+  if (temGit) {
+    const hp = (git(['config', '--get', 'core.hooksPath'], { cwd: RAIZ, permitirFalha: true }) || '').trim();
+    const dir = resolve(RAIZ, (git(['rev-parse', '--git-path', 'hooks'], { cwd: RAIZ, permitirFalha: true }) || '.git/hooks').trim());
+    const instalado = () => ['post-checkout', 'post-merge', 'post-commit'].every((h) => (ler(join(hp ? resolve(RAIZ, hp) : dir, h)) || '').includes('>>> henriworks'));
+    if (instalado()) add('git-hooks', 'ok', 'mapa se atualiza em checkout, merge e commit');
+    else if (hp) add('git-hooks', 'aviso', `core.hooksPath=${hp} (Husky ou similar): acrescente à mão a linha do mapa (node .henriworks/bin/henrimap.mjs git-hooks mostra qual)`);
+    else if (corrigir) { rodar('henrimap.mjs', ['git-hooks']); add('git-hooks', instalado() ? 'corrigido' : 'aviso', instalado() ? 'hooks do Git instalados (post-checkout, post-merge, post-commit)' : 'hook do Git existente em outra linguagem: veja node .henriworks/bin/henrimap.mjs git-hooks'); }
+    else add('git-hooks', 'pendente', 'hooks do Git do mapa ausentes (o init --corrigir instala)');
+  }
+
+  // 7. Modelos liberados: sem fonte, a referência do pacote; com fonte, a política viva
+  const cfg = config(RAIZ);
+  const fonteCfg = process.env.HENRIWORKS_MODELOS_FONTE || cfg.modelos.fonte;
+  let lista = M.lerLiberados();
+  const ref = lerJson(M.REFERENCIA);
+  const precisaAtualizar = !lista || M.vencida(lista, cfg) || (!fonteCfg && (!M.ehReferencia(lista) || lista.obtidoEm !== ref?.obtidoEm));
+  if (precisaAtualizar && corrigir) {
+    const r = rodar('modelos.mjs', ['atualizar', '--silencioso']);
+    lista = M.lerLiberados();
+    add('modelos', lista && !M.vencida(lista, cfg) ? 'corrigido' : 'pendente', ((r.stdout || '').trim().split('\n')[0] || 'lista não atualizada'));
+  } else if (precisaAtualizar) add('modelos', 'pendente', lista ? 'lista vencida ou diferente da referência do pacote (o init --corrigir atualiza)' : 'sem lista de modelos (o init --corrigir carrega a referência do pacote)');
+  else add('modelos', 'ok', M.ehReferencia(lista) ? `referência do pacote: ${lista.modelos.length} modelos do seletor em ${new Date(lista.obtidoEm).toLocaleDateString('pt-BR')}` : `política de ${lista.escopo || lista.fonte}: ${lista.modelos.length} modelos`);
+  if (fonteCfg && !/^(gh:|api:|https?:)/.test(fonteCfg) && ref) {
+    const local = lerJson(resolve(RAIZ, fonteCfg));
+    const ids = (x) => JSON.stringify((x?.modelos || x?.politica?.models || []).map((m) => `${m.id || m.model_name}:${m.estado || m.policy_state}`).sort());
+    if (local && ids(local) === ids(ref)) add('modelos-fonte', 'aviso', `"modelos.fonte" aponta para ${fonteCfg}, igual à referência que o pacote já traz. Pode tirar a chave "modelos.fonte" do henriworks.json e apagar o arquivo.`);
+  }
+
+  // 8. Preços
+  const ip = M.infoPrecos();
+  for (const a of ip.avisos) add('precos', 'aviso', a);
+  if (ip.origem === 'usuario') {
+    // A tabela do usuário só se justifica com preço que o pacote não tem (acordo enterprise, modelo novo).
+    const chaveP = (m) => JSON.stringify([m.id, m.entrada, m.cache_leitura ?? null, m.cache_escrita ?? null, m.saida]);
+    const doPacote = new Set((ip.pacote?.modelos || []).map(chaveP));
+    const igual = ip.usuario.modelos.every((m) => doPacote.has(chaveP(m)));
+    const maisVelha = ip.pacote && String(ip.usuario.consultado_em || '') < String(ip.pacote.consultado_em || '');
+    if (igual) add('precos', 'aviso', `${M.PRECOS_USUARIO} não tem preço que o pacote não traga: pode apagar, e as próximas tabelas do pacote passam a valer`);
+    else add('precos', maisVelha ? 'aviso' : 'ok', `tabela sua (${M.PRECOS_USUARIO}), de ${ip.usuario.consultado_em || '?'}${maisVelha ? `; o pacote traz uma de ${ip.pacote.consultado_em}. Se não é preço de acordo, apague a sua` : ''}`);
+  } else if (!ip.avisos.length) add('precos', 'ok', `tabela do pacote, de ${ip.tabela.consultado_em || '?'}, ${ip.tabela.modelos.filter((m) => !m.legado).length} modelos atuais${ip.tabela.semPreco?.length ? ` (${ip.tabela.semPreco.join(', ')} sem preço na tela)` : ''}`);
+
+  // 9. Uso: pasta gravável e OpenTelemetry
+  try {
+    mkdirSync(USO_DIR, { recursive: true });
+    writeFileSync(join(USO_DIR, '.init'), new Date().toISOString());
+    rmSync(join(USO_DIR, '.init'), { force: true });
+    add('uso', 'ok', `dados em ${USO_DIR}`);
+  } catch (e) { add('uso', 'aviso', `não consigo gravar em ${USO_DIR} (${e.code || e.message}): uso e custo ficam de fora`); }
+  const otelArq = process.env.COPILOT_OTEL_FILE_EXPORTER_PATH || join(USO_DIR, 'otel', 'copilot-otel.jsonl');
+  const otelAmb = process.env.COPILOT_OTEL_ENABLED === 'true' || Boolean(process.env.COPILOT_OTEL_FILE_EXPORTER_PATH);
+  let otelRecente = false;
+  try { otelRecente = existsSync(otelArq) && statSync(otelArq).size > 0 && Date.now() - statSync(otelArq).mtimeMs < 7 * 864e5; } catch { /* sem arquivo */ }
+  add('otel', otelAmb || otelRecente ? 'ok' : 'pendente', otelAmb || otelRecente ? `ligado (${otelRecente ? 'arquivo recebendo dados' : 'variável no ambiente'})` : 'desligado: sem token, modelo e custo. O /hwk-init pergunta antes de ligar (uso.mjs configurar --aplicar)');
+
+  // 10. Canário
+  const pCan = join(RAIZ, ESTADO, 'canario.json');
+  let can = lerJson(pCan);
+  if (can?.isolado && can.subagente && cfg.revisaoIsolada.conferirPacote !== 'negar' && corrigir) {
+    const r = spawnSync(process.execPath, [join(BIN, 'hwk.mjs'), 'canario', 'aplicar'], { cwd: RAIZ, encoding: 'utf8' });
+    add('canário', r.status === 0 ? 'corrigido' : 'pendente', r.status === 0 ? 'isolado; conferência do pacote ligada agora' : (r.stderr || '').trim());
+  } else if (!can) add('canário', 'pendente', 'não rodou: o /hwk-init roda neste chat (ou /hwk-canario)');
+  else if (!can.conferidoEm) add('canário', 'pendente', 'preparado e não conferido: rode o /hwk-canario de novo');
+  else if (!can.isolado) add('canário', 'aviso', 'isolamento FALHOU nesta máquina: use a revisão em modo estrito até investigar');
+  else if (!can.hooks?.length) add('canário', 'pendente', 'isolado, mas nenhum hook registrou evento: Developer: Reload Window e rode o /hwk-canario de novo');
+  else if (cfg.revisaoIsolada.conferirPacote === 'negar') add('canário', 'ok', `isolado; conferência do pacote ligada (${new Date(can.conferidoEm).toLocaleDateString('pt-BR')})`);
+  else add('canário', 'pendente', 'isolado, mas o preToolUse não viu a chamada de subagente: a conferência do pacote fica desligada');
+
+  // 11. Arquivos do time que nasceram do molde
+  const verif = ler(join(RAIZ, HW, 'verificacao.json')) || '';
+  if (/tsconfig\.app\.json/.test(verif) && /npx eslint -f json \{arquivos\}/.test(verif)) add('verificacao', 'pendente', '.henriworks/verificacao.json parece o molde de MFE Angular: confira camadas e comandos (decisão do time)');
+  if ((ler(join(RAIZ, HW, 'padroes.md')) || '').includes('Apague os exemplos abaixo')) add('padroes', 'pendente', '.henriworks/padroes.md ainda tem os exemplos: o eixo de padrões usa o baseline até o time escrever as regras');
+
+  const conta = (n) => itens.filter((i) => i.nivel === n).length;
+  const res = { em: new Date().toISOString(), versao: lock?.versao || null, corrigir, itens, resumo: Object.fromEntries(['ok', 'corrigido', 'pendente', 'aviso', 'grave'].map((n) => [n, conta(n)])) };
+  gravarJson(join(RAIZ, ESTADO, 'init.json'), res);
+  if (op.json) { console.log(JSON.stringify(res, null, 2)); process.exit(conta('grave') ? 1 : 0); }
+  const rot = { ok: 'ok', corrigido: 'corrigido', pendente: 'PENDENTE', aviso: 'aviso', grave: 'GRAVE' };
+  console.log(`HenriWorks init${lock ? ` · ${lock.versao}` : ''} · ${basename(RAIZ)}${corrigir ? ' · com correções seguras' : ''}`);
+  for (const i of itens) console.log(`  ${rot[i.nivel].padEnd(10)} ${i.id.padEnd(16)} ${i.txt}`);
+  console.log(`\n${conta('ok') + conta('corrigido')} pronto(s), ${conta('pendente')} pendente(s), ${conta('aviso')} aviso(s), ${conta('grave')} grave(s). Registro: ${HW}/estado/init.json`);
+  if (conta('grave')) process.exit(1);
 }
 
 // ---------------------------------------------------------- pós-instalação
@@ -786,7 +949,7 @@ function cmdPosInstalacao() {
   console.log((m.stdout || m.stderr || '').trim().split('\n').slice(-2).join('\n'));
   const g = r('henrimap.mjs', ['git-hooks']);
   console.log((g.stdout || g.stderr || '').trim().split('\n').slice(-1)[0]);
-  if (!lerJson(join(RAIZ, ESTADO, 'canario.json'))?.conferidoEm) console.log('PENDENTE canário de isolamento: node .henriworks/bin/hwk.mjs canario preparar');
+  console.log('PRÓXIMO no VS Code: agente hwk, /hwk-init (confere tudo, roda o canário e liga o uso, num chat só)');
   const md = r('modelos.mjs', ['atualizar', '--silencioso']);
   if ((md.stdout || '').trim()) console.log(md.stdout.trim());
   const u = r('uso.mjs', ['configurar']);
@@ -799,7 +962,7 @@ const COMANDOS = {
   estado: cmdEstado, validar: cmdValidar, fatias: cmdFatias, reivindicar: cmdReivindicar, 'conferir-toca': cmdConferirToca,
   'ponto-de-partida': cmdPontoDePartida, hash: cmdHash, 'pacote-revisao': cmdPacoteRevisao, 'gravar-veredito': cmdGravarVeredito,
   'aprovar-spec': cmdAprovarSpec, arquivar: cmdArquivar, conhecimento: cmdConhecimento, ticket: cmdTicket, adotar: cmdAdotar,
-  canario: cmdCanario, estrito: cmdEstrito, 'pos-instalacao': cmdPosInstalacao,
+  canario: cmdCanario, estrito: cmdEstrito, init: cmdInit, 'pos-instalacao': cmdPosInstalacao,
 };
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
@@ -817,6 +980,6 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     process.exit(r.status ?? 1);
   }
   const f = COMANDOS[cmd];
-  if (!f) sair(2, readFileSync(fileURLToPath(import.meta.url), 'utf8').split('\n').slice(1, 27).map((l) => l.replace(/^\/\/ ?/, '')).join('\n'));
-  f(opcoes(resto));
+  if (!f) sair(2, readFileSync(fileURLToPath(import.meta.url), 'utf8').split('\n').slice(1, 28).map((l) => l.replace(/^\/\/ ?/, '')).join('\n'));
+  await f(opcoes(resto));
 }

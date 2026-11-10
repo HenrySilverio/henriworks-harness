@@ -88,7 +88,8 @@ async function principal() {
 
   // Canário: enquanto preparado e não conferido, registra o formato real dos eventos.
   const can = lerJson(join(cwd, '.henriworks', 'estado', 'canario.json'));
-  const canAtivo = can && !can.conferidoEm;
+  // HENRIWORKS_HOOK_TESTE: prova do hwk init. Não pode contar como evento do VS Code no canário.
+  const canAtivo = can && !can.conferidoEm && !process.env.HENRIWORKS_HOOK_TESTE;
 
   if (evento === 'sessionStart') {
     const { p, s } = sessao(sid);
@@ -172,7 +173,8 @@ async function principal() {
 
   // 3. Pacote literal do peixinho (isolamento C). Só liga depois do canário.
   if (cat === 'subagente' && ctx.cfg.revisaoIsolada.conferirPacote === 'negar') {
-    const alvoGf = texto.match(/\bhwk-gf-[\w-]+/);
+    // hwk-gf é o revisor único; hwk-gf-* cobre instalação antiga ainda não atualizada.
+    const alvoGf = texto.match(/\bhwk-gf(?:-[\w-]+)?\b/);
     if (alvoGf) {
       const campo = ctx.cfg.revisaoIsolada.campoPrompt;
       const prompt = (campo && typeof args[campo] === 'string' ? args[campo] : Object.values(args || {}).filter((v) => typeof v === 'string').sort((a, b) => b.length - a.length)[0] || '').trim();

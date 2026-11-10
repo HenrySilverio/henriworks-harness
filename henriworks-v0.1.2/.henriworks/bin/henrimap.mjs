@@ -120,6 +120,8 @@ function carregarTs() {
   try {
     const req = createRequire(join(RAIZ, 'package.json'));
     TS = req('typescript');
+    // TypeScript 7 (compilador nativo) não expõe a mesma API JS: sem ela, o mapa fica no L1.
+    if (typeof TS.resolveModuleName !== 'function' || !TS.sys || typeof TS.readConfigFile !== 'function') { TS = false; return TS; }
     const cand = ['tsconfig.json', 'tsconfig.base.json', 'tsconfig.app.json'].map((n) => join(RAIZ, n)).find(existsSync);
     if (cand) {
       const lido = TS.readConfigFile(cand, TS.sys.readFile);
@@ -133,13 +135,15 @@ function carregarTs() {
 
 function resolverTs(spec, de) {
   if (TS && TS_OPCOES) {
-    const r = TS.resolveModuleName(spec, join(RAIZ, de), TS_OPCOES, TS.sys).resolvedModule;
+    let r = null;
+    try { r = TS.resolveModuleName(spec, join(RAIZ, de), TS_OPCOES, TS.sys).resolvedModule; } catch { r = undefined; }
     if (r && !/node_modules/.test(r.resolvedFileName)) {
       const rel = barra(relative(RAIZ, r.resolvedFileName));
       if (!rel.startsWith('..')) return rel.replace(/\.d\.ts$/, '.ts');
     }
     if (r) return null;
   }
+  // sem resolução do compilador (ou ela falhou): resolve relativo, como no L1
   if (!spec.startsWith('.')) return null;
   const base = posix.join(posix.dirname(de), spec);
   for (const suf of ['', '.ts', '.tsx', '.js', '.mjs', '/index.ts', '/index.js']) if (existsSync(join(RAIZ, base + suf)) && statSync(join(RAIZ, base + suf)).isFile()) return barra(base + suf);
