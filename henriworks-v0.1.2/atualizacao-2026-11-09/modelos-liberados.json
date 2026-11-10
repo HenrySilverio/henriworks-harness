@@ -1,0 +1,23 @@
+{
+  "obtidoEm": "2026-11-09T18:00:00-03:00",
+  "escopo": "manual: VS Code > Language Models",
+  "modelos": [
+    { "id": "copilot-fusion",     "nome": "Copilot Fusion",     "estado": "enabled" },
+    { "id": "hydrafusion",        "nome": "HydraFusion",        "estado": "enabled" },
+    { "id": "claude-fable-5.1",   "nome": "Claude Fable 5.1",   "estado": "enabled" },
+    { "id": "claude-haiku-4.5",   "nome": "Claude Haiku 4.5",   "estado": "enabled" },
+    { "id": "claude-haiku-5.5",   "nome": "Claude Haiku 5.5",   "estado": "enabled" },
+    { "id": "claude-opus-5.5",    "nome": "Claude Opus 5.5",    "estado": "enabled" },
+    { "id": "claude-sonnet-5.5",  "nome": "Claude Sonnet 5.5",  "estado": "enabled" },
+    { "id": "gemini-3.8-flash",   "nome": "Gemini 3.8 Flash",   "estado": "enabled" },
+    { "id": "gemini-4-argon",     "nome": "Gemini 4 Argon",     "estado": "enabled" },
+    { "id": "gpt-5.3-codex",      "nome": "GPT-5.3-Codex",      "estado": "enabled" },
+    { "id": "gpt-6-astra",        "nome": "GPT-6 Astra",        "estado": "enabled" },
+    { "id": "gpt-6-luna",         "nome": "GPT-6 Luna",         "estado": "enabled" },
+    { "id": "gpt-6.1-sol",        "nome": "GPT-6.1 Sol",        "estado": "enabled" },
+    { "id": "gpt-6.1-terra",      "nome": "GPT-6.1 Terra",      "estado": "enabled" },
+    { "id": "grok-4.7",           "nome": "Grok 4.7",           "estado": "enabled" },
+    { "id": "kimi-k3",            "nome": "Kimi K3",            "estado": "enabled" },
+    { "id": "mai-code-1.1-flash", "nome": "MAI-Code-1.1-Flash", "estado": "enabled" }
+  ]
+}
