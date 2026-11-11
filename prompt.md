@@ -1,60 +1,19 @@
-Rode o instalador da versão nova **a partir da pasta do projeto onde o HenriWorks está instalado**, apontando para o `instalar.mjs` da pasta extraída do zip. O repositório do pacote é só a origem dos arquivos. Os comandos do dia a dia (`uso.mjs`, `hwk.mjs`) rodam no projeto, que tem a própria cópia em `.henriworks\bin`.
+O erro era do pacote: eu tinha gerado o revisor `hwk-gf` com `disable-model-invocation: true`. O VS Code tira da lista de subagentes todo agente marcado assim, e por isso o chat respondeu `Unknown agent_type: hwk-gf`. O `hwk-implementador`, que tem `false`, aparece na lista da sua tela.
 
-No Windows, com o zip novo extraído em `C:\ferramentas\henriworks-v0.1.2` (troque pelo seu caminho):
+O canário fez o certo ao parar. Ele não aceitou simular o revisor com o `general-purpose`, porque isso daria uma prova falsa de isolamento.
 
-```powershell
-# 1. vá para o projeto onde o HenriWorks está instalado
-cd C:\caminho\recr-fed-agc-jrnd-reneg
+**Correção no zip novo:**
 
-# 2. veja o que vai mudar, sem escrever nada
-node C:\ferramentas\henriworks-v0.1.2\instalar.mjs repo . --dry-run
+- **`hwk-gf`:** agora é `user-invocable: false` (continua fora do seletor) com `disable-model-invocation: false`, ou seja, pode ser chamado como subagente.
+- **`/hwk-init`:** acusa GRAVE (`subagentes`) se o `hwk-gf` ou o `hwk-implementador` estiverem travados.
+- **Teste de fumaça:** passou a conferir esse frontmatter e está em 28/28.
 
-# 3. atualize
-node C:\ferramentas\henriworks-v0.1.2\instalar.mjs repo .
+**Trade-off:** com o revisor chamável, o agente padrão poderia, em tese, delegar ao `hwk-gf` por conta própria. Há duas proteções:
 
-# 4. confira a instalação
-node .henriworks\bin\hwk.mjs init
-```
+- O `hwk-gf` responde "Sem pacote…" e para diante de qualquer mensagem que não seja a linha do pacote.
+- Depois que o canário passa, o `conferirPacote: "negar"` faz o hook bloquear qualquer prompt diferente do gerado pelo script.
 
-O instalador:
-
-- **Atualiza** os arquivos do HenriWorks que você não alterou (`.henriworks\bin`, agentes e skills), mesmo com o número de versão igual.
-- **Não toca** no que é seu: `verificacao.json`, `padroes.md`, mudanças, specs e conhecimento.
-- **Para com CONFLITO** se você editou algum arquivo do toolkit, sem sobrescrever. Nesse caso, me mande a lista antes de usar `--forcar`, porque ele descarta a sua edição.
-- **Não faz commit nem usa rede.** Só escreve no `.git\info\exclude`, como na primeira instalação.
-
-Depois de atualizar, ainda dentro do projeto:
-
-```powershell
-# relê os dois arquivos OTel com o importador novo e gera o painel
-node .henriworks\bin\uso.mjs importar --refazer
-node .henriworks\bin\uso.mjs painel
-
-# diagnóstico do arquivo do settings.json (roda de qualquer pasta; gera diagnostico-uso.md onde você está)
-node C:\caminho\do\diagnostico-uso.mjs --otel settings
-```
-
-No VS Code, abra um chat novo para carregar agentes, skills e hooks atualizados. Se você mudar o `github.copilot.chat.otel.outfile` no `settings.json`, feche e abra o VS Code: o exportador só lê essa configuração quando inicia.
-
-Para testar o pacote antes de instalar, rode o teste de fumaça **na pasta do pacote**: `node testes\smoke.mjs`. Ele cria um repositório temporário e o apaga no final, sem mexer no seu projeto. O resultado esperado é `27/27 passos ok`.
-
-O `init` caiu na hora de apagar uma pasta temporária, e o erro era do HenriWorks. Ele criava essa pasta dentro do projeto, em `.henriworks\estado\init-uso-teste`, para testar o hook. No Windows, quando o comando tentou apagá-la, algum programa ainda estava com ela aberta, e o `init` inteiro parou.
-
-**Causa provável:** a pasta acabou de ser criada dentro do projeto, e no Windows isso faz algum programa abri-la por instantes. Não confirmei qual foi. Os suspeitos mais prováveis são:
-
-- a extensão Jest-WS que aparece na sua barra de status, que vigia o projeto;
-- o vigia de arquivos do próprio VS Code;
-- o antivírus;
-- o OneDrive, se a pasta Documentos estiver sincronizada.
-
-**Correção no pacote novo:**
-
-- A pasta de teste agora fica na pasta temporária do sistema, fora do repositório. Nenhum vigia do projeto a enxerga mais.
-- A limpeza tenta 5 vezes e, se não conseguir, segue sem derrubar o comando. Fiz o mesmo na limpeza do `verificar.mjs`.
-- O `init` também tenta apagar a sobra da versão anterior, `estado\init-uso-teste`.
-- O teste de fumaça continua 27/27 aqui. Ele não roda no Windows, então não reproduz esse travamento: a prova é o `init` passar na sua máquina.
-
-**O que fazer, de dentro do projeto:**
+**O que fazer no Windows, a partir da raiz do projeto:**
 
 ```powershell
 cd "C:\Users\i459249\Documents\Projetos\Cockpit Agências\recr-fed-agc-jrnd-reneg"
@@ -63,14 +22,14 @@ node C:\caminho\henriworks-v0.1.2\instalar.mjs repo .
 node .henriworks\bin\hwk.mjs init
 ```
 
-O `hwk.mjs` do projeto não foi alterado por você, então o instalador o atualiza sem conflito.
+Você não mexeu no `hwk-gf.agent.md`, então o instalador troca sem conflito. Depois:
 
-Se depois disso a pasta `.henriworks\estado\init-uso-teste` continuar existindo, ela não atrapalha mais nada, porque está fora do Git pelo exclude. Para tirá-la, feche o VS Code e rode:
+1. Rode "Developer: Reload Window" ou reabra o VS Code. A lista de agentes é lida quando o chat inicia.
+2. Abra um chat **novo** com o agente `hwk` e rode `/hwk-canario`. A isca do chat anterior não vale, porque o canário precisa ser preparado e conferido no mesmo chat.
+3. Se aparecer "Allow" para o subagente ou o terminal, aprove.
 
-```powershell
-Remove-Item -Recurse -Force ".henriworks\estado\init-uso-teste"
-```
+**Resultado esperado:** "canário passou", e o `hwk init` seguinte troca o canário de PENDENTE para ok. Se ainda aparecer `Unknown agent_type`, abra `.github\agents\hwk-gf.agent.md` e confira a linha `disable-model-invocation: false`. Se estiver certa e o erro continuar, me mande a lista de tipos que o chat mostrar.
 
-Se nem com o VS Code fechado o Windows deixar apagar, o culpado é o antivírus ou o OneDrive. Nesse caso, vale tirar a pasta `Projetos` da sincronização do OneDrive, porque a mesma trava atinge `node_modules` e builds do Angular.
+**Para o painel:** esse chat do canário vale como o pedido real que faltava (Claude Haiku 5.5, 0,5 crédito na tela). Depois dele, rode `node diagnostico-uso.mjs` e `node .henriworks\bin\uso.mjs painel`. O painel deve mostrar esse 0,5 crédito, e esse número serve de conferência do valor que o Copilot cobrou.
 
-No Mac, o zip novo chegou na pasta `henriworks-harness/henriworks-v0.1.2`, mas não consegui extrair por cima: o Mac bloqueou a leitura e a gravação dos arquivos existentes. Lá a pasta ainda tem a versão de ontem; se for usar o Mac, extraia o zip manualmente.
+A documentação HTML também foi atualizada.
