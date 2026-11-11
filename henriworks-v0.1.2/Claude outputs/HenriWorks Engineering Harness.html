@@ -1478,7 +1478,7 @@ document.addEventListener('DOMContentLoaded', function () {
       <div class="numero"><dt>comandos <code>/hwk-*</code></dt><dd><span data-count data-to="17">17</span></dd></div>
       <div class="numero"><dt>camadas, um trabalho cada</dt><dd><span data-count data-to="7">7</span></dd></div>
       <div class="numero"><dt>arquivo vai para o Git por mudança</dt><dd><span class="sinal">1</span></dd></div>
-      <div class="numero"><dt>passos ok no teste de fumaça</dt><dd><span data-count data-to="28" data-suffix="/28">28/28</span></dd></div>
+      <div class="numero"><dt>passos ok no teste de fumaça</dt><dd><span data-count data-to="30" data-suffix="/30">30/30</span></dd></div>
     </dl>
     <div class="ticker" aria-hidden="true"><div class="ticker__trilho"><span><b>/</b>hwk-init</span><span><b>$</b> hwk estado</span><span><b>$</b> henrimap query "saldo projetado"</span><span><b>$</b> hwk validar GPCNLS-10019-mostrar-saldo-projetado</span><span><b>$</b> hwk fatias GPCNLS-10019-mostrar-saldo-projetado --gravar</span><span><b>$</b> hwk pacote-revisao GPCNLS-10019-mostrar-saldo-projetado design</span><span><b>$</b> hwk conferir-toca GPCNLS-10019-mostrar-saldo-projetado</span><span><b>$</b> verificar.mjs GPCNLS-10019-mostrar-saldo-projetado --salvar</span><span><b>$</b> henrimap affected src/app/core/api/saldo-api.ts</span><span><b>$</b> hwk arquivar GPCNLS-10019-mostrar-saldo-projetado</span><span><b>$</b> uso.mjs painel</span><span><b>$</b> hwk estado</span><span><b>$</b> henrimap query "saldo projetado"</span><span><b>$</b> hwk validar GPCNLS-10019-mostrar-saldo-projetado</span><span><b>$</b> hwk fatias GPCNLS-10019-mostrar-saldo-projetado --gravar</span><span><b>$</b> hwk pacote-revisao GPCNLS-10019-mostrar-saldo-projetado design</span><span><b>$</b> hwk conferir-toca GPCNLS-10019-mostrar-saldo-projetado</span><span><b>$</b> verificar.mjs GPCNLS-10019-mostrar-saldo-projetado --salvar</span><span><b>$</b> henrimap affected src/app/core/api/saldo-api.ts</span><span><b>$</b> hwk arquivar GPCNLS-10019-mostrar-saldo-projetado</span><span><b>$</b> uso.mjs painel</span></div></div>
   </div>
@@ -1545,9 +1545,9 @@ document.addEventListener('DOMContentLoaded', function () {
             <p class="eyebrow">Camada 2 · texto para o modelo</p>
             <h3>Agentes</h3>
             <dl class="arq__dl">
-              <div><dt>O que é</dt><dd>Nove arquivos <code>.github/agents/hwk*.agent.md</code>. Cada um é uma fronteira de permissão: ferramentas, subagentes que pode chamar e se recebe as instruções do projeto.</dd></div>
+              <div><dt>O que é</dt><dd>Nove arquivos <code>.github/agents/hwk*.agent.md</code>. Cada um é uma fronteira de permissão: ferramentas e se outro agente pode chamá-lo como subagente. O frontmatter segue o schema do harness Copilot.</dd></div>
               <div><dt>Quando entra</dt><dd>Quando você o escolhe no seletor, ou quando outro agente o chama como subagente.</dd></div>
-              <div><dt>Faz</dt><dd>Fixa o que a fase pode fazer. <code>hwk-discovery</code> não tem terminal nem busca; <code>hwk-gf</code> só lê, sem instruções do projeto; <code>hwk-review</code> só chama o <code>hwk-gf</code>; <code>hwk-implement</code> coordena e despacha o <code>hwk-implementador</code>.</dd></div>
+              <div><dt>Faz</dt><dd>Fixa o que a fase pode fazer. <code>hwk-discovery</code> não tem terminal nem busca; <code>hwk-gf</code> só lê; <code>hwk-implement</code> coordena e despacha o <code>hwk-implementador</code>. Que o <code>hwk-gf</code> não vê a conversa é provado pelo canário (por versão do VS Code) e travado pelo hook, não pelo frontmatter.</dd></div>
               <div><dt>Não faz</dt><dd>Não carrega procedimento longo: o corpo é um roteiro curto que aponta para a skill ou para o contrato.</dd></div>
               <div class="arq__porque"><dt>Por que assim</dt><dd>Permissão é a única coisa que só um agente garante. Procedimento igual com permissão igual não precisa de agente separado: por isso 16 viraram 9.</dd></div>
             </dl>
@@ -2191,7 +2191,7 @@ painel: C:\Users\voce\.henriworks\uso\painel\index.html (214 registro(s) novo(s)
       <ol class="passos">
         <li class="passo">
           <h3>Valide a máquina</h3>
-          <p>Cria um repositório temporário, instala, roda o <code>init</code>, simula o canário, percorre o fluxo inteiro e apaga tudo. Esperado: <code>28/28 passos ok</code>.</p>
+          <p>Cria um repositório temporário, instala, roda o <code>init</code>, simula o canário, percorre o fluxo inteiro e apaga tudo. Esperado: <code>30/30 passos ok</code>.</p>
           <div class="cod vs vs--term"><div class="vs__painel-abas"><span class="is-on">TERMINAL</span><span class="vs__painel-d">powershell</span></div><pre><span class="saida__cmd" aria-hidden="true">PS C:\src\extrato-mfe&gt; </span><code>node C:\caminho\henriworks-v0.1.2\testes\smoke.mjs</code></pre><button class="copiar" type="button">Copiar</button></div>
         </li>
         <li class="passo">
