@@ -1,0 +1,11 @@
+{
+  "versionarArtefatos": false,
+  "bloquearGitNoAgente": false,
+  "conhecimento": "conhecimento/",
+  "ticket": { "padrao": "[A-Z][A-Z0-9]+-\\d+", "noId": "obrigatorio" },
+  "revisaoIsolada": { "conferirPacote": "off", "modoEstrito": false },
+  "sobreposicao": { "travaArquivo": "off" },
+  "mapa": { "primeiroAntesDeBusca": "negar-uma-vez", "orcamentoSaida": 2000 },
+  "uso": { "coletar": true, "alertas": [0.5, 0.8, 1.0] },
+  "modelos": { "fonte": null, "validadeDias": 7 }
+}

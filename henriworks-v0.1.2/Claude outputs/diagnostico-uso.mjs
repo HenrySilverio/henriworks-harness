@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 // HenriWorks · diagnóstico do uso. Arquivo único, sem dependência, Node 20+.
 //
-//   node diagnostico-uso.mjs [--otel <arquivo.jsonl>] [--uso <pasta>] [--repo <raiz do repositório>]
+//   node diagnostico-uso.mjs [--otel <arquivo.jsonl> | --otel settings] [--uso <pasta>] [--repo <raiz do repositório>]
+//
+// --otel settings lê o arquivo do "github.copilot.chat.otel.outfile" do settings.json do VS Code.
 //
 // Gera diagnostico-uso.md na pasta atual. Serve para descobrir por que o painel não mostra o modelo do
 // chat: que spans o OpenTelemetry do Copilot grava, em que campos vêm modelo e tokens, e o que o
@@ -20,7 +22,17 @@ import { join } from 'node:path';
 const args = process.argv.slice(2);
 const op = (n) => { const i = args.indexOf(`--${n}`); return i >= 0 ? args[i + 1] : null; };
 const USO = op('uso') || process.env.HENRIWORKS_USO || join(homedir(), '.henriworks', 'uso');
-const OTEL = op('otel') || process.env.COPILOT_OTEL_FILE_EXPORTER_PATH || join(USO, 'otel', 'copilot-otel.jsonl');
+function outfileDoSettings() {
+  for (const p of [process.env.APPDATA && join(process.env.APPDATA, 'Code', 'User', 'settings.json'), join(homedir(), 'Library', 'Application Support', 'Code', 'User', 'settings.json'), join(homedir(), '.config', 'Code', 'User', 'settings.json')].filter(Boolean)) {
+    if (!existsSync(p)) continue;
+    const m = readFileSync(p, 'utf8').match(/"github\.copilot\.chat\.otel\.outfile"\s*:\s*"([^"]+)"/);
+    if (m) return m[1].replace(/\\\\/g, '\\').replace(/\$\{userHome\}|^~(?=[\\/])/, homedir());
+  }
+  console.error('o settings.json do VS Code não tem "github.copilot.chat.otel.outfile"');
+  process.exit(2);
+}
+const OTEL = op('otel') === 'settings' ? outfileDoSettings() : op('otel') || process.env.COPILOT_OTEL_FILE_EXPORTER_PATH || join(USO, 'otel', 'copilot-otel.jsonl');
+const ORIGEM_OTEL = op('otel') === 'settings' ? 'outfile do settings.json' : op('otel') ? '--otel' : process.env.COPILOT_OTEL_FILE_EXPORTER_PATH ? 'variável COPILOT_OTEL_FILE_EXPORTER_PATH' : 'padrão do HenriWorks';
 const REPO = op('repo') || process.cwd();
 
 // Valores de texto que podem aparecer: só estes atributos, e só se parecerem nome técnico curto.
@@ -102,7 +114,7 @@ function visitar(no, prof = 0) {
 const lerJson = (p) => { try { return JSON.parse(readFileSync(p, 'utf8')); } catch { return null; } };
 const lerJsonl = (dir) => (existsSync(dir) ? readdirSync(dir).filter((n) => n.endsWith('.jsonl')).flatMap((n) => readFileSync(join(dir, n), 'utf8').split(/\r?\n/).filter(Boolean).map((l) => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean)) : []);
 
-const out = ['# Diagnóstico de uso · HenriWorks (v2)', '', `Gerado em ${new Date().toISOString()} · ${platform()} · Node ${process.versions.node}`, ''];
+const out = ['# Diagnóstico de uso · HenriWorks (v3)', '', `Gerado em ${new Date().toISOString()} · ${platform()} · Node ${process.versions.node}`, ''];
 
 // 1. Configuração do exportador
 out.push('## 1. Exportador OpenTelemetry', '');
@@ -123,7 +135,7 @@ if (settings) {
 out.push('');
 
 // 2. Arquivo OTel
-out.push('## 2. Arquivo OTel', '');
+out.push('## 2. Arquivo OTel', '', `- arquivo lido: ${ORIGEM_OTEL}`);
 if (!existsSync(OTEL)) {
   out.push(`Não existe no caminho esperado (${OTEL.includes(homedir()) ? OTEL.replace(homedir(), '~') : 'caminho definido por variável'}).`, '');
 } else {

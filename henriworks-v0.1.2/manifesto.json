@@ -1,0 +1,131 @@
+{
+  "toolkit": "henriworks",
+  "nome": "HenriWorks Engineering Harness",
+  "versao": "0.1.2",
+  "lock": ".henriworks/henriworks.lock.json",
+  "backup": ".henriworks/.toolkit-backup",
+  "lockGlobal": "henriworks.lock.json",
+  "backupGlobal": ".henriworks-backup",
+  "pendencias": {
+    ".henriworks/verificacao.json": "edite .henriworks/verificacao.json: camadas e comandos vieram do molde de MFE Angular. No chat, em qualquer agente: /hwk-configurar verificacao.",
+    ".henriworks/padroes.md": "preencha .henriworks/padroes.md com as regras auditáveis do repositório (o eixo padrões usa baseline enquanto estiver vazio). No chat: /hwk-configurar padroes."
+  },
+  "posInstalacao": {
+    "script": ".henriworks/bin/hwk.mjs",
+    "args": [
+      "pos-instalacao"
+    ],
+    "titulo": "Pós-instalação (mapa, hooks do Git, modelos, OTel)",
+    "seFalhar": "a pós-instalação falhou: rode node .henriworks/bin/hwk.mjs pos-instalacao e veja a saída inteira."
+  },
+  "excluir": [
+    "/.henriworks/",
+    "/.github/agents/hwk*.agent.md",
+    "/.github/skills/hwk-*/",
+    "/.github/skills/henriworks-fluxo/",
+    "/.github/hooks/henriworks.json"
+  ],
+  "instrucoes": {
+    "arquivo": "instrucoes/henriworks.md",
+    "marcador": "henriworks"
+  },
+  "ignorar": [
+    "instrucoes/**",
+    "testes/**",
+    "extras/**"
+  ],
+  "semGithubMantem": [
+    ".github/hooks/"
+  ],
+  "regras": [
+    {
+      "origem": ".github/agents/hwk*.agent.md",
+      "tipo": "gerenciado",
+      "global": true
+    },
+    {
+      "origem": ".github/skills/hwk-*/**",
+      "tipo": "gerenciado",
+      "global": true
+    },
+    {
+      "origem": ".github/skills/henriworks-fluxo/**",
+      "tipo": "gerenciado",
+      "global": true
+    },
+    {
+      "origem": ".github/hooks/henriworks.json",
+      "tipo": "gerenciado"
+    },
+    {
+      "origem": ".henriworks/bin/**",
+      "tipo": "gerenciado"
+    },
+    {
+      "origem": ".henriworks/config/precos.json",
+      "tipo": "gerenciado"
+    },
+    {
+      "origem": ".henriworks/config/modelos-referencia.json",
+      "tipo": "gerenciado"
+    },
+    {
+      "origem": "README.md",
+      "tipo": "gerenciado",
+      "destino": ".henriworks/docs/README.md"
+    },
+    {
+      "origem": "assets/**",
+      "tipo": "gerenciado",
+      "destino": ".henriworks/docs/"
+    },
+    {
+      "origem": ".henriworks/henriworks.json",
+      "tipo": "semente"
+    },
+    {
+      "origem": ".henriworks/verificacao.json",
+      "tipo": "semente"
+    },
+    {
+      "origem": ".henriworks/executores.json",
+      "tipo": "semente"
+    },
+    {
+      "origem": ".henriworks/padroes.md",
+      "tipo": "semente"
+    },
+    {
+      "origem": ".henriworks/glossario.md",
+      "tipo": "semente"
+    },
+    {
+      "origem": ".henriworks/specs/index.md",
+      "tipo": "semente"
+    },
+    {
+      "origem": ".henriworks/decisoes/index.md",
+      "tipo": "semente"
+    },
+    {
+      "origem": ".henriworks/changes/.gitkeep",
+      "tipo": "semente"
+    },
+    {
+      "origem": ".henriworks/briefings/EXEMPLO/briefing.md",
+      "tipo": "semente"
+    }
+  ],
+  "removidos": [
+    ".github/agents/hwk-grill.agent.md",
+    ".github/agents/hwk-triagem.agent.md",
+    ".github/agents/hwk-gf-zoom-out.agent.md",
+    ".github/agents/hwk-gf-compreensao.agent.md",
+    ".github/agents/hwk-gf-design.agent.md",
+    ".github/agents/hwk-gf-prontidao.agent.md",
+    ".github/agents/hwk-gf-spec.agent.md",
+    ".github/agents/hwk-gf-padroes.agent.md",
+    ".github/agents/hwk-gf-plantao.agent.md"
+  ],
+  "conhecidos": {}
+}
