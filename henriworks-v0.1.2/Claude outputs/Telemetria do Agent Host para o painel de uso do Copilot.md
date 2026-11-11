@@ -44,6 +44,8 @@ Conteúdo exato:
 | `captureContent` | `false` | Não grava prompt, resposta, código nem argumento de ferramenta. |
 | `capture.identity` | `false` | Não grava nome de usuário nem de máquina. |
 
+Já existe configuração gerenciada pelo servidor do GitHub na organização, mas sem bloco `telemetry`. Por isso o arquivo local vale hoje. O cache dela fica em `%LOCALAPPDATA%\Copilot\managed-settings.json`; é só cache, não é este arquivo, e não deve ser editado.
+
 Requisitos:
 
 - VS Code 1.143 ou mais novo. A máquina do piloto tem 1.146.0.
@@ -105,7 +107,7 @@ O maior risco é efeito colateral da configuração gerenciada, por isso o pilot
 **Perguntas em aberto:**
 
 - [ ] TI: a ferramenta que distribui configuração nas estações consegue gravar um arquivo em `Program Files`?
-- [ ] TI: a organização já usa configuração gerenciada do Copilot pelo servidor do GitHub? A fonte de maior precedência fica com o bloco `telemetry` inteiro, então este arquivo seria ignorado.
+- [ ] Administradores do Copilot no GitHub: a organização já usa configuração gerenciada pelo servidor (cache conferido em 11/11 na máquina do piloto). Hoje ela define marketplaces de plugins, modelo padrão e permissões, mas não tem bloco `telemetry`. Se passar a ter, ela fica com o bloco inteiro e este arquivo deixa de valer: avisar antes, ou levar o `filePath` para lá se o servidor aceitar.
 - [ ] Governança: qual é o prazo de guarda aceito para o arquivo local?
 - [ ] Time: alguém usa os harnesses Claude ou Codex no chat do VS Code?
 
