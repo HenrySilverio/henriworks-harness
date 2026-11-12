@@ -1478,7 +1478,7 @@ document.addEventListener('DOMContentLoaded', function () {
       <div class="numero"><dt>comandos <code>/hwk-*</code></dt><dd><span data-count data-to="17">17</span></dd></div>
       <div class="numero"><dt>camadas, um trabalho cada</dt><dd><span data-count data-to="7">7</span></dd></div>
       <div class="numero"><dt>arquivo vai para o Git por mudança</dt><dd><span class="sinal">1</span></dd></div>
-      <div class="numero"><dt>passos ok no teste de fumaça</dt><dd><span data-count data-to="32" data-suffix="/32">32/32</span></dd></div>
+      <div class="numero"><dt>passos ok no teste de fumaça</dt><dd><span data-count data-to="35" data-suffix="/35">35/35</span></dd></div>
     </dl>
     <div class="ticker" aria-hidden="true"><div class="ticker__trilho"><span><b>/</b>hwk-init</span><span><b>$</b> hwk estado</span><span><b>$</b> henrimap query "saldo projetado"</span><span><b>$</b> hwk validar GPCNLS-10019-mostrar-saldo-projetado</span><span><b>$</b> hwk fatias GPCNLS-10019-mostrar-saldo-projetado --gravar</span><span><b>$</b> hwk pacote-revisao GPCNLS-10019-mostrar-saldo-projetado design</span><span><b>$</b> hwk conferir-toca GPCNLS-10019-mostrar-saldo-projetado</span><span><b>$</b> verificar.mjs GPCNLS-10019-mostrar-saldo-projetado --salvar</span><span><b>$</b> henrimap affected src/app/core/api/saldo-api.ts</span><span><b>$</b> hwk arquivar GPCNLS-10019-mostrar-saldo-projetado</span><span><b>$</b> uso.mjs painel</span><span><b>$</b> hwk estado</span><span><b>$</b> henrimap query "saldo projetado"</span><span><b>$</b> hwk validar GPCNLS-10019-mostrar-saldo-projetado</span><span><b>$</b> hwk fatias GPCNLS-10019-mostrar-saldo-projetado --gravar</span><span><b>$</b> hwk pacote-revisao GPCNLS-10019-mostrar-saldo-projetado design</span><span><b>$</b> hwk conferir-toca GPCNLS-10019-mostrar-saldo-projetado</span><span><b>$</b> verificar.mjs GPCNLS-10019-mostrar-saldo-projetado --salvar</span><span><b>$</b> henrimap affected src/app/core/api/saldo-api.ts</span><span><b>$</b> hwk arquivar GPCNLS-10019-mostrar-saldo-projetado</span><span><b>$</b> uso.mjs painel</span></div></div>
   </div>
@@ -1706,11 +1706,11 @@ document.addEventListener('DOMContentLoaded', function () {
       <div class="duas">
         <div>
           <h3>Rigor Lite</h3>
-          <p>Padrão. Proposta e fatias, sem <code>design.md</code>. A spec é revisada pelo peixinho com duas lentes: design e prontidão.</p>
+          <p>Padrão. Proposta e fatias, sem <code>design.md</code>. A spec é revisada pelo peixinho com duas lentes: design e prontidão. Só <code>[bloqueante]</code> reprova; o resto é decisão sua. Antes do plano, <code>hwk briefing</code> confere os insumos: análise do Figma, contrato de cada camada, exemplos.</p>
         </div>
         <div>
           <h3>Rigor Full</h3>
-          <p>Obrigatório quando muda contrato entre camadas, há operação irreversível, requisito regulatório ou de segurança, mais de um repositório ou decisão durável. Com <code>design.md</code> e cinco estágios de revisão.</p>
+          <p>Só com gatilho declarado (<code>Gatilho:</code> na proposta): contrato entre camadas muda, operação irreversível, requisito regulatório ou de segurança, mais de um repositório ou decisão durável. Usar campo que o contrato já expõe não conta. Com <code>design.md</code> e cinco estágios de revisão.</p>
         </div>
       </div>
     </section>
@@ -1818,7 +1818,7 @@ document.addEventListener('DOMContentLoaded', function () {
           <li><code>hwk pacote-revisao &lt;id&gt; design</code> gera o pacote e imprime o prompt literal.</li>
           <li>O elefante delega com exatamente esse prompt. Com a conferência ligada, o hook nega qualquer outro texto.</li>
           <li>O peixinho lê o pacote e só os arquivos listados. Responde no formato pedido.</li>
-          <li><code>hwk gravar-veredito</code> grava. Nunca sobrescreve: uma nova rodada vira <code>-2</code>, <code>-3</code>.</li>
+          <li><code>hwk gravar-veredito</code> confere o formato (etiqueta de cada achado, contagem, decisão) e grava. Fora do formato, nada é gravado e o mesmo pacote vai a um revisor novo. Nunca sobrescreve: uma nova rodada vira <code>-2</code>, <code>-3</code>.</li>
         </ol>
       </div>
 
@@ -2191,7 +2191,7 @@ painel: C:\Users\voce\.henriworks\uso\painel\index.html (214 registro(s) novo(s)
       <ol class="passos">
         <li class="passo">
           <h3>Valide a máquina</h3>
-          <p>Cria um repositório temporário, instala, roda o <code>init</code>, simula o canário, percorre o fluxo inteiro e apaga tudo. Esperado: <code>32/32 passos ok</code>.</p>
+          <p>Cria um repositório temporário, instala, roda o <code>init</code>, simula o canário, percorre o fluxo inteiro e apaga tudo. Esperado: <code>35/35 passos ok</code>.</p>
           <div class="cod vs vs--term"><div class="vs__painel-abas"><span class="is-on">TERMINAL</span><span class="vs__painel-d">powershell</span></div><pre><span class="saida__cmd" aria-hidden="true">PS C:\src\extrato-mfe&gt; </span><code>node C:\caminho\henriworks-v0.1.2\testes\smoke.mjs</code></pre><button class="copiar" type="button">Copiar</button></div>
         </li>
         <li class="passo">
