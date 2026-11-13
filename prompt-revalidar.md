@@ -1,75 +1,44 @@
-Now writing the changes: validator first.Now the contract, briefing template and procedures (grill/triagem, plan, review).Ajustei o harness, e o pacote passa no teste de fumaça (35 de 35 passos). O código continua sendo decisão sua; o HenriWorks não mexe no Git.
+Não: a revisão não é a cada fatia. Ela pediu revisão por causa de um defeito meu no cálculo de "a spec mudou?". Também tem razão sobre as imagens: anexadas no chat, elas não servem como evidência.
 
-## O que mudou
+## O fluxo certo
 
-**1. Rigor Lite como padrão de fato.**
-- **Full só com gatilho:** a proposta precisa declarar `Gatilho:` com um dos seis casos do contrato, senão o `hwk validar` recusa. O plano pergunta antes de gravar Full, e `rigor: lite` na invocação mantém Lite.
-- **Regra nova no contrato:** usar um campo que o contrato já expõe não é mudança de contrato. No seu ticket, foi isso que levou a Full.
+| Revisão | Quando | Quantas vezes |
+| --- | --- | --- |
+| Da **spec** | depois do plano, antes de implementar; você aprova com `aprovar-spec` | uma |
+| Do **código** | no fim, depois da última fatia (a de Verificação) | uma |
+| Entre fatias | não existe | nenhuma |
 
-**2. Regra das rodadas.**
-- **Só `[bloqueante]` reprova** e justifica replanejar. `[importante]` e `[sugestão]` ficam com você.
-- **Revisão sem REPROVADO:** a revisão diz que a spec pode ser aprovada e não sugere replanejar.
-- **Menor mudança:** o replanejamento faz a menor alteração que resolve o achado, sem critério novo. Foi o critério 3 novo que gerou o pingue-pongue.
+## O que aconteceu
 
-**3. Grill e triagem pedem os insumos** (entendi "tipagem" como triagem).
-- **Tabela de insumos:** o briefing ganhou a seção `## Insumos`, com oito linhas:
-  - ticket e critérios do PO;
-  - Figma com a análise;
-  - contrato de API por camada;
-  - regras e limites;
-  - estados e erros;
-  - configuração;
-  - exemplos;
-  - dependências.
-- **Situação de cada um:** `ok` (com onde está), `não se aplica` (com o motivo) ou `pendente` (com quem fornece).
-- **O que o discovery pede:**
-  - **Figma:** a análise salva em `figma.md`; ele já entrega o pedido pronto para o `design-to-code`.
-  - **Contrato:** um para o MFE e outro para o BFF, separados, com a grafia exata dos campos.
-  - **Exemplos:** pelo menos um caso com valores reais.
-- **`hwk briefing <caminho>`** confere a tabela. Com insumo pendente, ou só o link do Figma, o plano não começa: ele lista o que falta, você entrega no chat e ele grava na pasta do briefing.
-- **Briefing do formato anterior:** `/hwk-triagem <caminho do briefing>` completa o mesmo arquivo.
+O `aprovar-spec` grava um "hash" (uma impressão digital) da spec. O `hwk estado` recalcula e compara. Se mudou, ele entende que alguém alterou o acordo e pede nova revisão.
 
-**4. `hwk descartar`.** Apaga a mudança e o estado dela: pacotes, reivindicações, edições e, com `--com-briefing`, o briefing. Também lista os commits. Sem `--aplicar` é só prévia, e o hook impede o agente de rodar o `--aplicar`.
+Marcar `[x]` e escrever a evidência não deveriam contar como mudança. Mas a minha conta ainda deixava uma linha vazia no lugar da evidência. Na tarefa 3.5, isso mudou o hash, e o estado pediu revisão da spec no meio da implementação.
 
-## Passo a passo para remover a mudança atual
+Pior: o revisor recebeu a fatia com a sua evidência e julgou a evidência como se fosse spec. Daí veio o "bloqueante" das capturas, que não deveria existir.
 
-Na raiz do projeto, no seu terminal:
+## Correção no zip novo (36 de 36 no teste de fumaça)
+
+- **Hash:** checkbox e todo o bloco de evidência (a linha `Evidência:` e as linhas de continuação) saem do cálculo, como se nunca tivessem sido escritos. O teste novo usa evidência em duas linhas e arquivo com quebra de linha do Windows.
+- **Aprovações antigas:** continuam valendo pelo modo de compatibilidade.
+- **Revisor da spec:** o pacote diz que checkbox e evidência são registro de execução, fora da revisão.
+- **Tarefa manual:** a evidência fica em uma linha, por exemplo `Evidência: conferido por Henrique Silvério em 13/11/2026, localhost com mock, faixa 13/11 a 19/12; capturas na PR`.
+- **Capturas de tela:** vão na **descrição da PR**. O `resumo.md` ganhou a seção "Evidências manuais", onde você as anexa. É ali que o revisor e o QA veem, e ali elas ficam.
+- **`hwk-implement`:** não pede mais para anexar imagem no chat como evidência. Se o estado pedir revisão depois de marcar uma tarefa, ele mostra e para, sem mandar você revisar.
+- O README tem a seção "Revisões: duas, não uma por fatia" e uma linha em "Solução de problemas".
+
+## O que fazer agora, nessa mudança
 
 ```powershell
-cd "C:\Users\i459249\Documents\Projetos\Cockpit Agências\recr-fed-agc-jrnd-reneg"
-
-# 1. pacote novo
 node C:\caminho\henriworks-v0.1.2\instalar.mjs repo .
-
-# 2. prévia: o que sai e quais commits pertencem à mudança
-node .henriworks\bin\hwk.mjs descartar GPCNLS-10019-limitar-vencimento-primeira-parcela --com-briefing
-
-# 3. apaga a mudança, o estado e o briefing antigo
-node .henriworks\bin\hwk.mjs descartar GPCNLS-10019-limitar-vencimento-primeira-parcela --com-briefing --aplicar
+node .henriworks\bin\hwk.mjs estado
 ```
 
-O `--com-briefing` vale porque você vai refazer o discovery com insumos. Sem ele, o briefing fica, e o `/hwk-triagem` pode completá-lo.
+- **O estado mostra `implement`, com a fatia 04 na frontier:** siga para a 04 no `hwk-implement` e, no fim, a revisão de código. Não precisa refazer a revisão da spec.
+- **Ainda mostra `revisao-spec`:** o agente provavelmente mexeu em algo além da evidência. Abra `tarefas/03-calendario-restrito.md` e confira:
+  - **Se só a 3.5 e a linha de evidência mudaram:** aprove uma vez, registrando o motivo:
+    ```powershell
+    node .henriworks\bin\hwk.mjs aprovar-spec GPCNLS-10019-limitar-vencimento-intervalo --por "Henrique Silvério" --apesar "só a evidência da 3.5 mudou o hash (pacote antigo)"
+    ```
+  - **Se o texto da tarefa mudou:** aí a revisão da spec faz sentido.
 
-**4. Código.** A prévia lista os commits desde o `Início:` da proposta, sem merges, e os que citam o id. Escolha uma opção:
-
-| Situação | Comando |
-| --- | --- |
-| Quer manter o código feito | nada; o plano novo parte dele |
-| Quer desfazer e a branch já foi publicada | `git revert --no-edit <hashes da lista>` |
-| Quer apagar e **nunca** deu push | `git reset --hard <Início>` (apaga de vez) |
-
-O `e1cd23f` (merge da branch) fica de fora da lista de propósito. Não reverta um merge que trouxe a `main`.
-
-**5. Conferir:** `node .henriworks\bin\hwk.mjs estado` não deve listar a mudança, e `git status` deve estar limpo.
-
-## Depois: o plano novo
-
-1. **Discovery.** Abra um chat novo com o agente `hwk-discovery` e rode `/hwk-triagem <texto ou caminho do ticket>`.
-   - Ele vai pedir cada insumo.
-   - Rode antes o `design-to-code` para gerar o `figma.md`.
-   - Tenha à mão o caminho do tipo do response no MFE e o do contrato do BFF.
-2. **Conferência.** `node .henriworks\bin\hwk.mjs briefing .henriworks\briefings\GPCNLS-10019-<assunto>\briefing.md` deve sair sem erro.
-3. **Plano.** Abra um chat novo com o agente `hwk-plan` e rode `/hwk-plan <caminho do briefing> rigor: lite`.
-4. **Revisão e aprovação.** Abra um chat novo com o agente `hwk-review` e rode `/hwk-review spec <id>`. Aprove pelo terminal, mesmo com `[importante]` em aberto.
-
-O README e a documentação HTML descrevem os insumos, o rigor e o `descartar`.
+O achado `[importante]` da última revisão, sobre limites ausentes ou invertidos, continua opcional: aceite, anote ou ignore. Ele não bloqueia.
