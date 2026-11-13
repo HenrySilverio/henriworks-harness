@@ -1,44 +1,31 @@
-Não: a revisão não é a cada fatia. Ela pediu revisão por causa de um defeito meu no cálculo de "a spec mudou?". Também tem razão sobre as imagens: anexadas no chat, elas não servem como evidência.
+O diff mostra que eu estava errado: **o texto da tarefa não mudou**. A linha da 3.5 é a mesma, só passou de `[ ]` para `[x]`. O agente só acrescentou a evidência, e a escreveu **sem recuo**: começa na coluna 0, em vez de dois espaços abaixo da tarefa. Os "+" sem número no diff são só a mesma linha longa quebrada na tela.
 
-## O fluxo certo
+A versão anterior do pacote só reconhecia a evidência recuada. Sem recuo, a linha contou como texto da spec, e por isso o estado pediu revisão. Corrigi isso no zip novo: a evidência é reconhecida com ou sem recuo e fica fora do hash. O teste de fumaça agora inclui exatamente o caso do Windows e passa (36 de 36).
 
-| Revisão | Quando | Quantas vezes |
-| --- | --- | --- |
-| Da **spec** | depois do plano, antes de implementar; você aprova com `aprovar-spec` | uma |
-| Do **código** | no fim, depois da última fatia (a de Verificação) | uma |
-| Entre fatias | não existe | nenhuma |
+## Caminho certo
 
-## O que aconteceu
+**1. Ajuste a evidência você mesmo**, para ficar em uma linha, apontando para a PR em vez do chat:
 
-O `aprovar-spec` grava um "hash" (uma impressão digital) da spec. O `hwk estado` recalcula e compara. Se mudou, ele entende que alguém alterou o acordo e pede nova revisão.
+```markdown
+- [x] 3.5 Conferência visual do calendário com o mock local (manual)
+  Evidência: conferido por Henrique Silvério em 13/11/2026 no localhost com o mock do frontend; dias e meses fora do intervalo desabilitados (outubro e novembro/2026); capturas na PR
+```
 
-Marcar `[x]` e escrever a evidência não deveriam contar como mudança. Mas a minha conta ainda deixava uma linha vazia no lugar da evidência. Na tarefa 3.5, isso mudou o hash, e o estado pediu revisão da spec no meio da implementação.
+O recuo agora é opcional, mas deixe os dois espaços para manter o padrão. Tire o "anexadas neste chat": foi isso que o revisor marcou, e o chat não guarda nada.
 
-Pior: o revisor recebeu a fatia com a sua evidência e julgou a evidência como se fosse spec. Daí veio o "bloqueante" das capturas, que não deveria existir.
-
-## Correção no zip novo (36 de 36 no teste de fumaça)
-
-- **Hash:** checkbox e todo o bloco de evidência (a linha `Evidência:` e as linhas de continuação) saem do cálculo, como se nunca tivessem sido escritos. O teste novo usa evidência em duas linhas e arquivo com quebra de linha do Windows.
-- **Aprovações antigas:** continuam valendo pelo modo de compatibilidade.
-- **Revisor da spec:** o pacote diz que checkbox e evidência são registro de execução, fora da revisão.
-- **Tarefa manual:** a evidência fica em uma linha, por exemplo `Evidência: conferido por Henrique Silvério em 13/11/2026, localhost com mock, faixa 13/11 a 19/12; capturas na PR`.
-- **Capturas de tela:** vão na **descrição da PR**. O `resumo.md` ganhou a seção "Evidências manuais", onde você as anexa. É ali que o revisor e o QA veem, e ali elas ficam.
-- **`hwk-implement`:** não pede mais para anexar imagem no chat como evidência. Se o estado pedir revisão depois de marcar uma tarefa, ele mostra e para, sem mandar você revisar.
-- O README tem a seção "Revisões: duas, não uma por fatia" e uma linha em "Solução de problemas".
-
-## O que fazer agora, nessa mudança
+**2. Instale o pacote e confira:**
 
 ```powershell
 node C:\caminho\henriworks-v0.1.2\instalar.mjs repo .
 node .henriworks\bin\hwk.mjs estado
 ```
 
-- **O estado mostra `implement`, com a fatia 04 na frontier:** siga para a 04 no `hwk-implement` e, no fim, a revisão de código. Não precisa refazer a revisão da spec.
-- **Ainda mostra `revisao-spec`:** o agente provavelmente mexeu em algo além da evidência. Abra `tarefas/03-calendario-restrito.md` e confira:
-  - **Se só a 3.5 e a linha de evidência mudaram:** aprove uma vez, registrando o motivo:
-    ```powershell
-    node .henriworks\bin\hwk.mjs aprovar-spec GPCNLS-10019-limitar-vencimento-intervalo --por "Henrique Silvério" --apesar "só a evidência da 3.5 mudou o hash (pacote antigo)"
-    ```
-  - **Se o texto da tarefa mudou:** aí a revisão da spec faz sentido.
+- **O estado mostra `implement` com a fatia 04:** a revisão de spec que deu REPROVADO perde o efeito. A aprovação original volta a valer e a spec continua sendo a aprovada. Siga para a fatia 04 no `hwk-implement` e, no fim, rode a revisão de código.
+- **Ainda mostra `revisao-spec`:** a fatia 01 provavelmente tem uma evidência em formato antigo. Aprove uma vez, registrando o motivo:
+  ```powershell
+  node .henriworks\bin\hwk.mjs aprovar-spec GPCNLS-10019-limitar-vencimento-intervalo --por "Henrique Silvério" --apesar "só a evidência da 3.5 mudou o hash (pacote antigo); texto das tarefas igual ao aprovado"
+  ```
 
-O achado `[importante]` da última revisão, sobre limites ausentes ou invertidos, continua opcional: aceite, anote ou ignore. Ele não bloqueia.
+**3. Na PR**, anexe as capturas na seção "Evidências manuais" do `resumo.md` que o `hwk-archive` vai gerar.
+
+Fica de pé a outra proposta, que ainda não fiz: guardar uma cópia da spec na aprovação, para o `hwk estado` mostrar **o que** mudou e não só "spec alterada". Nesse caso ela teria mostrado na hora que a diferença era só a evidência.
