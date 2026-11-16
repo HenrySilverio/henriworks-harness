@@ -1864,11 +1864,11 @@ document.addEventListener('DOMContentLoaded', function () {
       <div class="duas">
         <div>
           <h3>Régua: o que reprova</h3>
-          <p><code>[bloqueante]</code> só em quatro casos: critério que não dá para verificar ou que contradiz outro; divergência que nem briefing, insumos ou ponteiros respondem; risco de dado, segurança ou regulatório; na revisão de código, bug que o próprio diff introduziu. Nunca reprova: fora do escopo, outra camada, render de componente de terceiros (a tarefa manual prova), problema que já existia, pedido de mais evidência.</p>
+          <p><code>[bloqueante]</code> só em quatro casos: critério que não dá para verificar ou que contradiz outro; divergência que nem briefing, insumos ou ponteiros respondem; risco de dado, segurança ou regulatório; na revisão de código, bug que o próprio diff introduziu. Nunca reprova: fora do escopo, outra camada, render de componente de terceiros (a tarefa manual prova), problema que já existia, pedido de mais evidência, a forma da evidência manual (sem print nem PR).</p>
         </div>
         <div>
           <h3>Rodadas com teto</h3>
-          <p>Depois de replanejar, só o estágio que reprovou roda de novo, com o veredito anterior no pacote. Duas reprovações seguidas e o script para. A decisão é sua, no seu terminal: <code>aprovar-spec --apesar</code>, <code>aceitar-revisao --apesar</code>, <code>rodada-extra</code> ou partir a mudança. O hook nega os três ao agente, e o aceite vai para a PR.</p>
+          <p>Depois de replanejar, só o estágio que reprovou roda de novo, com o veredito anterior no pacote. Duas reprovações seguidas pela mesma régua e o script para; os outros eixos seguem. A decisão é sua, no seu terminal: <code>aprovar-spec --apesar</code>, <code>aceitar-revisao --apesar</code>, <code>rodada-extra</code> ou partir a mudança. O hook nega os três ao agente, e o aceite vai para a PR.</p>
         </div>
       </div>
     </section>
