@@ -1,28 +1,26 @@
-O limite de rodadas funcionou como foi feito para funcionar, mas está contando reprovações antigas. As 6 reprovações do eixo `spec` são de antes da nova régua de severidade e de commits anteriores. O código mudou desde então e a régua também. Nenhuma revisão foi feita ainda com as regras novas, então não faz sentido aceitar às cegas. Libere uma rodada.
+Sim, o próximo passo é o archive. Antes, dois pontos:
 
-**Agora, no Git Bash, na raiz do repo**
+**1. Confira se o motivo não ficou como `<motivo>` literal.** O comando aceita qualquer texto, e esse motivo vai para a PR, na seção "Pontos para o revisor humano". Confira:
 
 ```bash
-node .henriworks/bin/hwk.mjs rodada-extra GPCNLS-10019-limitar-vencimento-intervalo spec --por "Henrique Silvério"
+cat .henriworks/changes/GPCNLS-10019-limitar-vencimento-intervalo/revisao/ACEITE-*.md
 ```
 
-Depois rode `/hwk-review GPCNLS-10019-limitar-vencimento-intervalo` de novo num chat novo do `hwk-review`. Ele revisa os três eixos com a régua nova: `padroes` e `plantao` ainda não têm veredito nesse commit, por isso não foram revisados.
+Se a linha `Apesar de:` estiver com `<motivo>`, rode de novo com o motivo real. O arquivo é regravado:
 
-**Depois da revisão**
+```bash
+node .henriworks/bin/hwk.mjs aceitar-revisao GPCNLS-10019-limitar-vencimento-intervalo --por "Henrique Silvério" --apesar "achado fora da régua: <qual era e por quê>"
+```
 
-- **Três aprovados:** siga para o `/hwk-archive`.
-- **`spec` reprovado de novo:** leia o `[bloqueante]`.
-  - Se for um bug que o diff introduziu, corrija pelo `hwk-plan` com `replanejar:`.
-  - Se for fora da régua (outra camada, render do Liquid, pedido de mais evidência, algo que já existia), aceite:
-    ```bash
-    node .henriworks/bin/hwk.mjs aceitar-revisao GPCNLS-10019-limitar-vencimento-intervalo --por "Henrique Silvério" --apesar "<motivo>"
-    ```
+**2. Só aceite se o bloqueante estava fora da régua.** Fora da régua é: outra camada, render do Liquid, algo que já existia antes, pedido de mais evidência. Se o achado era um bug que o seu diff introduziu, aceitar leva o bug para a PR. Nesse caso, desfaça pelo `hwk-plan` com `replanejar:`. Se tiver dúvida, me manda o achado e eu te digo de que lado ele cai.
 
-O `aceitar-revisao` só funciona depois dessa rodada. Ele exige veredito de `padroes` e `plantao` no commit atual, e hoje não existe nenhum.
+**Depois, o archive**
 
-**Duas falhas do harness que esse caso mostrou**
+1. Deixe a árvore limpa. Qualquer commit novo invalida o aceite, porque o aceite fica preso ao HEAD.
+   ```bash
+   git status
+   ```
+2. Num chat novo com o agente `hwk-archive`, rode `/hwk-archive GPCNLS-10019-limitar-vencimento-intervalo`. Ele confere o aceite, gera o `resumo.md` com "Pontos para o revisor humano" e arquiva.
+3. Abra a PR com o `resumo.md` como descrição. Com o número da PR, rode `/hwk-fechar <pasta arquivada> <número>` no mesmo agente.
 
-1. **O limite conta veredito da régua antiga.** Ao trocar de régua, a contagem deveria recomeçar do zero. A correção é gravar a versão da régua no pacote e contar só as reprovações da versão atual.
-2. **Um eixo no limite parou os outros dois.** O agente deveria revisar `padroes` e `plantao` mesmo com o `spec` travado. Assim você decide já com os três vereditos na mão.
-
-Quer que eu corrija os dois no pacote? Para esta mudança não faz diferença: a liberação da rodada extra já resolve.
+Um problema do harness que esse caso mostrou: o `aceitar-revisao` deveria recusar texto entre `< >` como motivo. Vou incluir isso junto com as duas correções do limite de rodadas, se você quiser.
