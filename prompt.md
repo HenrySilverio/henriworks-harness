@@ -1,35 +1,52 @@
-O erro era do pacote: eu tinha gerado o revisor `hwk-gf` com `disable-model-invocation: true`. O VS Code tira da lista de subagentes todo agente marcado assim, e por isso o chat respondeu `Unknown agent_type: hwk-gf`. O `hwk-implementador`, que tem `false`, aparece na lista da sua tela.
+**Diagnóstico:** o replanejamento não resolve porque o problema não está no plano, e sim na forma como o verificador classifica a falha.
 
-O canário fez o certo ao parar. Ele não aceitou simular o revisor com o `general-purpose`, porque isso daria uma prova falsa de isolamento.
+**Por que cai sempre no mesmo lugar**
 
-**Correção no zip novo:**
+- O `verificar.mjs` só chama uma falha de teste de PRÉ-EXISTENTE se existir um `baseline.json`, gravado na base antes do primeiro commit da mudança. Sem esse arquivo, toda falha de teste conta como BLOQUEANTE, porque não há como provar que ela é antiga.
+- A sua mudança provavelmente está sem baseline. Na hora de gravar, a branch já tinha commits da tentativa que você descartou, e nesse caso o subcomando se recusa a gravar.
+- Resultado: qualquer teste antigo quebrado num arquivo que a mudança toque vira bloqueante. Aqui foi o `ofertas.component.spec.ts`, porque a fatia 13 tirou um `console.log` dele.
 
-- **`hwk-gf`:** agora é `user-invocable: false` (continua fora do seletor) com `disable-model-invocation: false`, ou seja, pode ser chamado como subagente.
-- **`/hwk-init`:** acusa GRAVE (`subagentes`) se o `hwk-gf` ou o `hwk-implementador` estiverem travados.
-- **Teste de fumaça:** passou a conferir esse frontmatter e está em 28/28.
-
-**Trade-off:** com o revisor chamável, o agente padrão poderia, em tese, delegar ao `hwk-gf` por conta própria. Há duas proteções:
-
-- O `hwk-gf` responde "Sem pacote…" e para diante de qualquer mensagem que não seja a linha do pacote.
-- Depois que o canário passa, o `conferirPacote: "negar"` faz o hook bloquear qualquer prompt diferente do gerado pelo script.
-
-**O que fazer no Windows, a partir da raiz do projeto:**
+Confira com:
 
 ```powershell
-cd "C:\Users\i459249\Documents\Projetos\Cockpit Agências\recr-fed-agc-jrnd-reneg"
-
-node C:\caminho\henriworks-v0.1.2\instalar.mjs repo .
-node .henriworks\bin\hwk.mjs init
+Test-Path .henriworks\changes\GPCNLS-10019-limitar-vencimento-intervalo\baseline.json
 ```
 
-Você não mexeu no `hwk-gf.agent.md`, então o instalador troca sem conflito. Depois:
+**Atenção a uma ambiguidade:** quando o agente escreveu "teste preexistente", isso quer dizer que o teste já existia. Não quer dizer que a falha já existia. Ninguém verificou isso ainda, e é a primeira coisa a descobrir.
 
-1. Rode "Developer: Reload Window" ou reabra o VS Code. A lista de agentes é lida quando o chat inicia.
-2. Abra um chat **novo** com o agente `hwk` e rode `/hwk-canario`. A isca do chat anterior não vale, porque o canário precisa ser preparado e conferido no mesmo chat.
-3. Se aparecer "Allow" para o subagente ou o terminal, aprove.
+**O que fazer**
 
-**Resultado esperado:** "canário passou", e o `hwk init` seguinte troca o canário de PENDENTE para ok. Se ainda aparecer `Unknown agent_type`, abra `.github\agents\hwk-gf.agent.md` e confira a linha `disable-model-invocation: false`. Se estiver certa e o erro continuar, me mande a lista de tipos que o chat mostrar.
+1. Revise o diff da fatia 13 e commite. As duas falhas não vêm dela: os testes novos passaram, e o arquivo antigo só perdeu um log.
+2. Rode o teste que falha no commit da base. O `.henriworks/` não é versionado, então continua no lugar quando você troca de commit:
+   ```powershell
+   $mb = git merge-base HEAD origin/<Base da proposta>
+   git switch --detach $mb
+   npx jest src/app/features/ofertas/ofertas.component.spec.ts   # ou o comando de teste do seu verificacao.json
+   ```
 
-**Para o painel:** esse chat do canário vale como o pedido real que faltava (Claude Haiku 5.5, 0,5 crédito na tela). Depois dele, rode `node diagnostico-uso.mjs` e `node .henriworks\bin\uso.mjs painel`. O painel deve mostrar esse 0,5 crédito, e esse número serve de conferência do valor que o Copilot cobrou.
+**Caso A: o teste também falha na base.** Então a falha já existia. Ainda no commit da base, grave o baseline e volte para a branch:
 
-A documentação HTML também foi atualizada.
+```powershell
+node .henriworks\bin\verificar.mjs baseline GPCNLS-10019-limitar-vencimento-intervalo
+git switch -
+node .henriworks\bin\verificar.mjs GPCNLS-10019-limitar-vencimento-intervalo --salvar
+```
+
+Isso não é contornar a guarda. A guarda existe para impedir um baseline gravado com código da mudança dentro, e no commit da base esse código não está. As duas falhas passam a aparecer como PRÉ-EXISTENTE, e isso vale para o resto da mudança. Deixe registrado no `resumo.md`, em "Pontos para o revisor humano", que esse teste já falhava na base.
+
+**Caso B: o teste passa na base.** Então foi a sua mudança que quebrou, e é um bloqueante de verdade. Volte para a branch com `git switch -`. O provável: o botão da linha 271 agora depende da nova regra de intervalo de vencimento, e a data do teste ficou fora do limite. A decisão é sua:
+
+- **O comportamento novo é o esperado:** a fixture do teste está desatualizada, e corrigir faz parte da mudança.
+- **Não é o esperado:** é bug no componente.
+
+Nos dois casos, a correção vira uma tarefa na fatia que mudou o componente, ou na própria 13, que já tem esse arquivo no `Toca:`. Não crie uma fatia nova. Com o pacote atualizado, uma tarefa a mais não reabre a revisão inteira: os estágios que já aprovaram não rodam de novo, e basta rodar o `aprovar-spec` outra vez.
+
+Não aceite `xit`, `skip` nem comentar o teste. Isso apaga o sinal.
+
+**Falha do harness, que eu corrigiria:**
+
+- Hoje o verificador marca a falha como "sem-baseline" internamente, mas a saída não diz isso, nem diz como resolver.
+- O certo é ele imprimir que não há baseline e mostrar a receita acima.
+- Além disso, o `hwk-implement` deveria parar logo no início quando o baseline for recusado, e não seguir sem avisar.
+
+Quer que eu inclua isso no pacote?
