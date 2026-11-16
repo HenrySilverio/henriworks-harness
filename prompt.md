@@ -72,3 +72,5 @@ O mapa é refeito na pós-instalação.
 A configuração gerenciada de telemetria (opção A) também não muda, porque o caminho dela não depende do HenriWorks.
 
 Se forem muitos repositórios, posso juntar os passos 1 a 4 num script que mostra o que vai fazer antes de aplicar.
+
+> node .henriworks/bin/hwk.mjs aceitar-revisao GPCNLS-10019-corrigir-valor-acordo --por "Henrique Silvério" --apesar "regra da API: sempre que há oferta parcelada, uma delas tem o desconto máximo (<fonte: contrato/BFF>); cenário do plantão não ocorre"
