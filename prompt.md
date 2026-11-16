@@ -1,69 +1,74 @@
-Então o código está certo e quem está errado é o critério 7 da spec. O revisor fez o trabalho dele: apontou que o código e a spec dizem coisas opostas. Só errou o lado, porque tratou a spec como verdade.
+Não apague tudo de uma vez. Dentro de `.henriworks/` está a base viva que você construiu: `specs/`, `decisoes/`, `glossario.md`, o `verificacao.json` e o `padroes.md` configurados, e o histórico das mudanças arquivadas. Leve isso para o Atlas antes, e só depois remova o HenriWorks.
 
-Não tire o `required`. O que precisa mudar é o critério 7.
+Os comandos abaixo são para o Git Bash, rodando na raiz de cada repositório que tem o HenriWorks.
 
-**Por que corrigir a spec em vez de só aceitar a revisão**
-
-Se você só aceitar, o `/hwk-archive` aplica o `deltas.md` e grava "data opcional" no estado do sistema. A descrição da PR também afirmaria o contrário do que o código faz. Daqui a três meses, quem consultar essa decisão vai encontrar a regra errada. A correção é uma linha.
-
-**Passos**
-
-1. Num chat novo com o agente `hwk-plan`:
-   ```
-   replanejar: GPCNLS-10019-limitar-vencimento-intervalo
-   O critério 7 está errado: dtPagamentoParcela é obrigatória. A API não aceita requisição sem data
-   ou com data fora do intervalo, então o required e o asterisco ficam. Corrija só o critério 7 e o
-   trecho do deltas.md que fala disso. Nenhuma tarefa nova, nenhuma fatia nova.
-   ```
-2. Confira o estado e aprove a spec corrigida:
-   ```bash
-   node .henriworks/bin/hwk.mjs estado
-   node .henriworks/bin/hwk.mjs aprovar-spec GPCNLS-10019-limitar-vencimento-intervalo --por "Henrique Silvério"
-   ```
-   Os estágios da revisão da spec que já aprovaram não rodam de novo. Se o `estado` listar algum como "a revisar", rode o `/hwk-review spec` antes de aprovar.
-3. Refaça o aceite da revisão de código com o motivo real. O HEAD não mudou, porque o `.henriworks/` não vai para o Git, então o comando só regrava o arquivo de aceite:
-   ```bash
-   node .henriworks/bin/hwk.mjs aceitar-revisao GPCNLS-10019-limitar-vencimento-intervalo --por "Henrique Silvério" --apesar "required correto: a API exige a data; o critério 7 estava errado e foi corrigido na spec. Evidência manual é declaração do dev, sem PR nem print."
-   ```
-4. Num chat novo com o agente `hwk-archive`: `/hwk-archive GPCNLS-10019-limitar-vencimento-intervalo`.
-
-**Alternativa**
-
-Em vez do passo 3, você pode rodar `rodada-extra` no eixo `spec` e depois o `/hwk-review` de novo. Com o critério corrigido, o `required` deixa de ser achado e sobra só a evidência, que você aceita.
-
-- **Prós:** fica um veredito limpo para o eixo `spec`.
-- **Contras:** mais uma rodada, e o revisor pode trazer ruído novo.
-
-Para esta mudança eu ficaria com o aceite.
-
-E as quatro correções do harness que listei antes: confirma que faço?
->
->
-Não exclua. A mudança está praticamente pronta:
-
-- 789 testes passando;
-- os eixos `padroes` e `plantao` aprovados;
-- as tarefas manuais concluídas.
-
-O que falta é corrigir o texto da spec, não o código. Se você descartar agora, joga fora trabalho pronto para fugir de três comandos.
-
-O agente fez a pergunta certa. A fatia 12 foi escrita com a mesma premissa errada do critério 7, a de que a data seria opcional. Se você corrigir só o critério, a spec continua se contradizendo, e a próxima revisão aponta isso de novo. Autorize a primeira opção. Responda no mesmo chat:
-
-```
-Opção 1. Ajuste o texto da fatia 12 para manter a obrigatoriedade de dtPagamentoParcela (required e
-asterisco), preserve os [x] e as evidências, corrija o critério 7 e o delta, e registre em Divergências:
-"critério 7 e fatia 12 previam data opcional; a API exige a data, sem ela ou fora do intervalo a
-requisição é recusada; o código mantém o required". Nada além disso.
-```
-
-Depois disso, o mesmo caminho de antes, no Git Bash:
+**1. Confira que não há mudança aberta**
 
 ```bash
 node .henriworks/bin/hwk.mjs estado
-node .henriworks/bin/hwk.mjs aprovar-spec GPCNLS-10019-limitar-vencimento-intervalo --por "Henrique Silvério"
-node .henriworks/bin/hwk.mjs aceitar-revisao GPCNLS-10019-limitar-vencimento-intervalo --por "Henrique Silvério" --apesar "required correto: a API exige a data; critério 7 e fatia 12 corrigidos na spec. Evidência manual é declaração do dev, sem PR nem print."
 ```
 
-Depois, `/hwk-archive GPCNLS-10019-limitar-vencimento-intervalo` num chat novo do `hwk-archive`.
+**2. Leve a base viva e as suas configurações**
 
-**Antes de aprovar, confirme uma coisa.** O critério 7 veio de algum lugar: do briefing, do Figma sem asterisco ou de um pedido do PO. Se alguém do produto pediu a data opcional, o harness não resolve isso: é uma conversa com o PO, e a resposta dele decide a spec. Se o critério nasceu de um erro do próprio plano, siga o passo a passo acima.
+Faça isso antes de instalar o Atlas. Assim o instalador encontra os arquivos já no lugar e os mantém como seus, em vez de criar os modelos vazios.
+
+```bash
+mkdir -p .bcatlas
+for f in specs decisoes changes briefings glossario.md padroes.md verificacao.json executores.json; do
+  [ -e ".henriworks/$f" ] && cp -r ".henriworks/$f" .bcatlas/
+done
+cp .henriworks/henriworks.json .bcatlas/bcatlas.json
+```
+
+**3. Remova o HenriWorks do repositório**
+
+```bash
+rm -rf .henriworks .github/skills/henriworks-fluxo .github/skills/hwk-* .github/agents/hwk*.agent.md .github/hooks/henriworks.json
+sed -i '/<!-- henriworks:inicio -->/,/<!-- henriworks:fim -->/d' AGENTS.md
+sed -i '/# >>> henriworks/,/# <<< henriworks/d' .git/info/exclude
+for h in post-checkout post-merge post-commit; do
+  [ -f ".git/hooks/$h" ] && sed -i '/# >>> henriworks/,/# <<< henriworks/d' ".git/hooks/$h"
+done
+```
+
+**4. Instale o Atlas e prove de novo**
+
+```bash
+node /c/Users/i459249/Documents/Projetos/<pasta>/bia-credit-atlas-v0.1.2/instalar.mjs repo .
+```
+
+Depois:
+
+1. Rode **Developer: Reload Window**.
+2. Num chat novo com o agente `bcatlas`, rode `/bcatlas-init`.
+3. Rode `/bcatlas-canario`. O canário precisa passar de novo, porque o subagente revisor agora se chama `bcatlas-gf` e a prova anterior valia para o `hwk-gf`.
+
+O mapa é refeito na pós-instalação.
+
+**Uma vez só, fora dos repositórios**
+
+1. Histórico de uso e custo, se quiser manter:
+   ```bash
+   mkdir -p ~/.bcatlas && mv ~/.henriworks/uso ~/.bcatlas/uso
+   node .bcatlas/bin/uso.mjs configurar --aplicar
+   ```
+   O `configurar --aplicar` aponta as variáveis de OTel para a pasta nova. Feche e abra o VS Code depois.
+2. Se você fez instalação global em algum momento, remova os arquivos do HenriWorks dela:
+   ```bash
+   rm -rf ~/.copilot/agents/hwk*.agent.md ~/.copilot/skills/hwk-* ~/.copilot/skills/henriworks-fluxo ~/.copilot/henriworks.lock.json
+   ```
+3. Por último:
+   ```bash
+   rm -rf ~/.henriworks
+   ```
+   Apague também a pasta do pacote `recr-cmn-henrispec2/henriworks-v0.1.2`. O HenriWorks público não é usado na máquina do banco.
+
+**O que fica**
+
+- Os `conhecimento/*.md` já commitados nos repositórios de produto: são documentação do produto.
+- O `.sdd/` do HenriSpec.
+- As suas `.github/instructions/*.instructions.md`.
+
+A configuração gerenciada de telemetria (opção A) também não muda, porque o caminho dela não depende do HenriWorks.
+
+Se forem muitos repositórios, posso juntar os passos 1 a 4 num script que mostra o que vai fazer antes de aplicar.
