@@ -37,3 +37,33 @@ Em vez do passo 3, você pode rodar `rodada-extra` no eixo `spec` e depois o `/h
 Para esta mudança eu ficaria com o aceite.
 
 E as quatro correções do harness que listei antes: confirma que faço?
+>
+>
+Não exclua. A mudança está praticamente pronta:
+
+- 789 testes passando;
+- os eixos `padroes` e `plantao` aprovados;
+- as tarefas manuais concluídas.
+
+O que falta é corrigir o texto da spec, não o código. Se você descartar agora, joga fora trabalho pronto para fugir de três comandos.
+
+O agente fez a pergunta certa. A fatia 12 foi escrita com a mesma premissa errada do critério 7, a de que a data seria opcional. Se você corrigir só o critério, a spec continua se contradizendo, e a próxima revisão aponta isso de novo. Autorize a primeira opção. Responda no mesmo chat:
+
+```
+Opção 1. Ajuste o texto da fatia 12 para manter a obrigatoriedade de dtPagamentoParcela (required e
+asterisco), preserve os [x] e as evidências, corrija o critério 7 e o delta, e registre em Divergências:
+"critério 7 e fatia 12 previam data opcional; a API exige a data, sem ela ou fora do intervalo a
+requisição é recusada; o código mantém o required". Nada além disso.
+```
+
+Depois disso, o mesmo caminho de antes, no Git Bash:
+
+```bash
+node .henriworks/bin/hwk.mjs estado
+node .henriworks/bin/hwk.mjs aprovar-spec GPCNLS-10019-limitar-vencimento-intervalo --por "Henrique Silvério"
+node .henriworks/bin/hwk.mjs aceitar-revisao GPCNLS-10019-limitar-vencimento-intervalo --por "Henrique Silvério" --apesar "required correto: a API exige a data; critério 7 e fatia 12 corrigidos na spec. Evidência manual é declaração do dev, sem PR nem print."
+```
+
+Depois, `/hwk-archive GPCNLS-10019-limitar-vencimento-intervalo` num chat novo do `hwk-archive`.
+
+**Antes de aprovar, confirme uma coisa.** O critério 7 veio de algum lugar: do briefing, do Figma sem asterisco ou de um pedido do PO. Se alguém do produto pediu a data opcional, o harness não resolve isso: é uma conversa com o PO, e a resposta dele decide a spec. Se o critério nasceu de um erro do próprio plano, siga o passo a passo acima.
