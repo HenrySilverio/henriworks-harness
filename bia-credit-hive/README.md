@@ -9,7 +9,12 @@
 
 b.IA Credit Hive: orquestrador de agentes para Spec-Driven Development no Copilot do VS Code e no GitHub Copilot app, organizado como uma colmeia — a rainha conduz a mudança e cada operária tem um papel (discovery, plano em fatias, implementação por fatia com os agentes da sua stack, revisão por um subagente que não viu a conversa, arquivamento e OK do QA) — do ticket do Jira até a PR, com portões humanos, relatório de uso só com contagens e tokens e o conhecimento de cada entrega guardado no repositório. Comandos /bia-credit-hive:*. Use em front-end, BFF, backend ou legado (COBOL, mainframe) da b.IA Credit para planejar, implementar, revisar ou fechar uma mudança.
 
-<p align="center"><img src="docs/assets/banner.svg" width="900" alt="b.IA Credit Hive, plugin do GitHub Copilot: do ticket do Jira à PR com plano em fatias, revisor sem contexto e OK do QA antes de fechar. 9 agentes, 18 comandos, 5 portões humanos."></p>
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/banner-dark.svg">
+    <img src="docs/assets/banner-light.svg" width="900" alt="b.IA Credit Hive, plugin do GitHub Copilot: do ticket do Jira à PR com plano em fatias, revisor sem contexto e OK do QA antes de fechar. Um favo com as etapas discovery, plano, fatias, revisão, QA e lições em volta do Hive; 9 agentes, 18 comandos e 5 portões humanos.">
+  </picture>
+</p>
 
 ## Onde usar
 
@@ -23,11 +28,23 @@ superfícies, como o Copilot CLI, ainda não foram validadas com o fluxo.
 - Node 20 ou mais no PATH do VS Code.
 - Repositório Git aberto pela raiz.
 
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/divider-dark.svg">
+    <img src="docs/assets/divider-light.svg" width="900" alt="">
+  </picture>
+</p>
+
 ## Como usar
 
 > Ainda não instalou? Comece pela [Instalação](#instalação) e volte aqui.
 
-<p align="center"><img src="docs/assets/flow.svg" width="900" alt="Fluxo: 1 Instalar pelo marketplace, 2 Preparar com :init, 3 Planejar com :plan, 4 Fatias com :implement, 5 Revisar com :review, 6 Fechar depois do OK do QA."></p>
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/flow-dark.svg">
+    <img src="docs/assets/flow-light.svg" width="900" alt="Fluxo em seis alvéolos: 1 Discovery (:triagem ou :grill), 2 Plano (:plan), 3 Spec aprovada (portão humano), 4 Fatias (:implement), 5 Revisão (:review), 6 Fechar depois do OK do QA.">
+  </picture>
+</p>
 
 ### 1. Preparar o repositório (uma vez por repositório, e depois de cada atualização do plugin)
 
@@ -164,6 +181,26 @@ O código precisa estar num repositório Git aberto no VS Code ou no Copilot app
 | `/bia-credit-hive:squad-audit` (agente `bchive`) | qualidade e custo da sua personalização do Copilot |
 | `/bia-credit-hive:lembrar <a lição>` | propõe uma lição de uso para o time aprovar |
 
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/divider-dark.svg">
+    <img src="docs/assets/divider-light.svg" width="900" alt="">
+  </picture>
+</p>
+
+## Como funciona: a colmeia
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/cards-dark.svg">
+    <img src="docs/assets/cards-light.svg" width="900" alt="A colmeia: Rainha, os agentes de fase que planejam e coordenam; Operárias, que executam uma fatia por vez com o executor do Hive ou o agente da sua stack; Peixinho, o revisor que não viu a conversa; Humano, que aprova a spec, aceita risco, dá o OK do QA, commita e abre a PR.">
+  </picture>
+</p>
+
+Cada papel tem só o contexto e as ferramentas de que precisa. A **rainha** (os agentes de fase) planeja e coordena;
+as **operárias** executam uma fatia por vez; o **peixinho** revisa sem ter visto a conversa; o **humano** decide o
+que é de gente: aprovar a spec, aceitar risco, dar o OK do QA, commitar e abrir a PR.
+
 ## Uso e privacidade
 
 Os hooks do plugin rodam em todo chat do harness Copilot, com ou sem o fluxo no repositório, e gravam em
@@ -203,6 +240,13 @@ Para tirar um repositório do relatório: `"uso": { "coletar": false }` em `.bch
 | `testes/smoke.mjs` | teste de fumaça: `node testes/smoke.mjs` (sem rede, numa pasta temporária) |
 
 Instruções para os agentes estão em inglês; artefatos, respostas e esta documentação, em português.
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/divider-dark.svg">
+    <img src="docs/assets/divider-light.svg" width="900" alt="">
+  </picture>
+</p>
 
 ## Instalação
 
