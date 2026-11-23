@@ -1,44 +1,51 @@
-O erro "não foi encontrado" é esperado. O `bradesco-marketplace-unstable` só recebe o plugin depois do primeiro merge na `main`, e até agora a `main` só tem o template. A ordem fica assim: PR, merge, uns 20 minutos de espera e aí a instalação pelo `-unstable`.
+Na ordem abaixo. Os comandos de terminal são no Git Bash.
 
-O clone do seu Mac aponta para o mesmo repositório (`Bradesco-Automation/bia-credit-hive-plugin`), mas se a sua conta só tem acesso pela máquina do banco, a PR sai de lá. Mandei um zip com os 9 arquivos da sondagem já nos caminhos certos, incluindo o README com o "Como usar" preenchido.
+**1. Confirme que a versão nova foi publicada**
 
-**No Windows do banco, no Git Bash**
+O merge dispara a publicação no `bradesco-marketplace-unstable`. O marketplace estável só recebe depois que o PR de release do release-please for aprovado. Espere a versão nova aparecer no unstable antes de seguir.
 
-1. Leve o `bia-credit-hive-sondagem-pr.zip` para a máquina do banco e extraia na raiz do clone:
-   ```bash
-   cd /c/Users/i459249/Documents/Projetos/bia-credit-hive-plugin   # ajuste para onde está o seu clone
-   git checkout main && git pull
-   git checkout -b chore/sondagem-formato
-   unzip -o /c/Users/i459249/Downloads/bia-credit-hive-sondagem-pr.zip
-   ```
-2. Marque os scripts como executáveis. O CONTRIBUTING pede isso para os scripts que hooks rodam, e o Windows não grava essa marca sozinho:
-   ```bash
-   git add -A
-   git update-index --chmod=+x scripts/probe-hook.mjs skills/bchive-init/scripts/init.mjs skills/bchive-init/assets/bin/bchive.mjs
-   git status --short
-   ```
-   O `git status --short` deve listar o README alterado e os 8 arquivos novos.
-3. Commit e push:
-   ```bash
-   git commit -m "chore: add plugin format probe"
-   git push -u origin chore/sondagem-formato
-   ```
-4. Abra a PR para a `main` com o título **`chore: add plugin format probe`**.
-   - O merge é squash, e o título vira o commit.
-   - Com `chore:` não sai release, mas o plugin chega ao `-unstable`.
-   - A aprovação precisa ser de outro code owner do time `reusable-ai-contributors`, não sua.
-   - O merge acontece sozinho quando o CI passa.
+**2. Limpe os restos dos testes, antes de instalar**
 
-**Se o CI reclamar de algo**, me mande o log. O `_plugin-ci` é do Reusable AI e eu não vi as regras dele. Os candidatos mais prováveis a dar problema:
+```bash
+bash ~/Downloads/limpar-henriworks.sh --procurar ~/projetos            # só mostra
+bash ~/Downloads/limpar-henriworks.sh --procurar ~/projetos --aplicar  # apaga
+```
 
-- a pasta `com.github.copilot/`, que é onde o VS Code lê agentes e hooks;
-- os scripts sem a marca de executável.
+Troque `~/projetos` pela pasta onde ficam seus clones. O script tira o HenriWorks, o Atlas e a sondagem (`.bchive-probe/`) da sua pasta de usuário e dos repositórios. Não mexe no plugin instalado nem em `.bchive/`, que o `init` substitui.
 
-**Depois do merge, uns 20 minutos**
+**3. Troque a sondagem pela versão completa**
 
-1. Instale pelo badge do VS Code do CONTRIBUTING, em "Teste antes da release". Se o plugin estiver instalado pelo `bradesco-marketplace`, desinstale antes.
-2. No repositório `recr-fed-agc-jrnd-reneg`, num chat novo com o agente `bchive`, rode `/bchive-init`.
-3. Num outro chat novo, de novo com o agente `bchive`, rode `/bchive-probe`.
-4. Me mande o `.bchive-probe/relatorio.md`. Se for por foto, tudo bem.
+A sondagem tem o mesmo nome, `bia-credit-hive`.
+1. No VS Code, na lista de plugins do Copilot, desinstale o `bia-credit-hive`.
+2. Instale de novo pelo botão do README ou procurando no `bradesco-marketplace-unstable`.
+3. Recarregue a janela: `Ctrl+Shift+P` › **Developer: Reload Window**.
 
-Esse zip tem o mesmo conteúdo que já deixei no clone do Mac. Se a sua conta conseguir fazer push pelo Mac, dá para abrir a PR por lá e pular a parte de levar o zip.
+Desinstalar e instalar é mais seguro que só atualizar: garante que nenhum arquivo da sondagem fique para trás. Para conferir:
+
+```bash
+grep '"version"' ~/.copilot/installed-plugins/*/bia-credit-hive/plugin.json   # a versão nova, não 1.0.1-dev.3
+ls ~/.copilot/installed-plugins/*/bia-credit-hive/skills | wc -l               # 18
+```
+
+Se aparecer mais de uma pasta `bia-credit-hive`, ficou instalação duplicada: remova a antiga pela lista de plugins.
+
+**4. Prepare cada repositório**
+
+Abra a raiz do repositório. Abra um chat novo com o modo **Copilot** selecionado, não o Local. Escolha o agente **bchive** e envie:
+
+```
+/bia-credit-hive:init
+```
+
+O resultado esperado:
+- nenhum item **GRAVE**;
+- canário aprovado;
+- item `instalacao-antiga` ok.
+
+Se algum vier com aviso, o próprio `init` diz o que fazer. Pode mandar a saída para mim, que ela não tem conteúdo do projeto.
+
+**5. Primeiro uso (opcional)**
+
+Ainda no agente **bchive**:
+- `/bia-credit-hive:squad-audit` mostra o custo e os conflitos das suas instruções.
+- `/bia-credit-hive:start <o que você quer fazer>` diz por onde começar.
