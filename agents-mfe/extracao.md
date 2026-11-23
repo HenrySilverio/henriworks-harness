@@ -44,3 +44,30 @@ Com esse material, eu:
 - trato o spec junto com o service.
 
 Depois de atualizar, rodo de novo os mesmos testes de build e de navegador.
+>
+>
+>Olá, pessoal!
+
+Estamos começando o Programa de Adoção do b.IA Credit Hive nas nossas squads. Ele passa a ser o padrão de desenvolvimento com IA na BU Crédito.
+
+Contexto: o b.IA Credit Hive é um plugin do GitHub Copilot, para usar no VS Code ou no GitHub Copilot app. Ele leva uma demanda do ticket do Jira até a PR, em frontend, BFF ou backend, seguindo fases definidas: descoberta, plano, implementação, revisão e arquivamento. Quem escreve o código não é quem revisa, e a entrega só fecha depois do OK do QA. O Hive mede a adoção com contagens e tokens, sem registrar conversa nem código. Ele substitui o HenriSpec, e quem já usa traz as specs e decisões para o Hive.
+
+Objetivo do encontro: sair da sessão com o b.IA Credit Hive instalado na máquina, o repositório de cada squad preparado e validado, e o fluxo de trabalho entendido.
+
+Pauta:
+
+Abertura: objetivo do programa e expectativa de adoção nas squads
+Visão geral do b.IA Credit Hive: o que muda no dia a dia e como funciona o fluxo
+Hands-on de instalação: plugin pelo marketplace e preparação do repositório com /bia-credit-hive:init
+Ajuste dos padrões da squad com /bia-credit-hive:configurar
+Primeiro uso com um ticket real do Jira, até o plano revisado (/bia-credit-hive:start)
+Dúvidas e próximos passos
+
+Para aproveitar o hands-on, venha com:
+
+VS Code com o GitHub Copilot funcionando, com o chat no modo Copilot (não o Local)
+Node 20 ou mais instalado (confira com node -v no terminal)
+O repositório da sua squad clonado e abrindo pela raiz
+Um ticket do Jira que você vai pegar em breve
+
+Contamos com a presença de todos. Nos vemos lá! 🐝
